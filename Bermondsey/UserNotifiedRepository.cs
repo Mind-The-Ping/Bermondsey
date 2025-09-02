@@ -49,4 +49,54 @@ public class UserNotifiedRepository
 
         return Result.Success();
     }
+
+    public async Task<IEnumerable<User>> GetUsersWithDifferentSeverityAsync(Guid disruptionId, Severity severity)
+    {
+        var results = new List<User>();
+
+        var indexKey = $"notified_index:{disruptionId}";
+        var keys = (await _database.SetMembersAsync(indexKey))
+           .Select(x => (RedisKey)x.ToString())
+           .ToArray();
+
+        foreach (var key in keys)
+        {
+            var parts = key.ToString().Split(':');
+            if (parts.Length < 4) {
+                continue;
+            }
+       
+            if (Enum.TryParse<Severity>(parts[^1], out var storedSeverity))
+            {
+                if (storedSeverity == severity) {
+                    continue;
+                }
+            }
+
+            var data = await _database.StringGetAsync(key);
+            if (!data.IsNullOrEmpty)
+            {
+                var user = JsonSerializer.Deserialize<User>(data!);
+                if (user is not null) {
+                    results.Add(user);
+                }
+            }
+        }
+
+        return results;
+    }
+
+    public async Task DeleteByDisruptionIdAsync(Guid disruptionId)
+    {
+        var indexKey = $"notified_index:{disruptionId}";
+        var keys = (await _database.SetMembersAsync(indexKey))
+            .Select(x => (RedisKey)x.ToString())
+            .ToArray();
+
+        if (keys.Length != 0) {
+            await _database.KeyDeleteAsync(keys);
+        }
+
+        await _database.KeyDeleteAsync(indexKey);
+    }
 }
