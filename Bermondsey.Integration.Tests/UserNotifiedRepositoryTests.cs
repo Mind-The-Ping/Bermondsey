@@ -40,7 +40,17 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
 
         var userNotifiedRepository = new UserNotifiedRepository(options);
 
-        var user = new User(Guid.NewGuid(), Guid.NewGuid(), Severity.Minor, "+441234567890");
+        var startStation = new Station(Guid.Parse("44e87f5b-015d-42f8-a250-232e226de45b"), "Chancery Lane");
+        var endStation = new Station(Guid.Parse("73bce1de-143f-4903-928a-c34ceb3db42e"), "Mile End");
+
+        var user = new User(
+            Guid.NewGuid(), 
+            Guid.NewGuid(), 
+            startStation, 
+            endStation, 
+            Severity.Minor, 
+            "+441234567890");
+
         var users = new List<(User, TimeOnly)>
         {
             (user,TimeOnly.FromDateTime(DateTime.UtcNow.AddMinutes(30)))
@@ -68,9 +78,27 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
 
         var userNotifiedRepository = new UserNotifiedRepository(options);
 
+        var startStation = new Station(Guid.Parse("44e87f5b-015d-42f8-a250-232e226de45b"), "Chancery Lane");
+        var endStation = new Station(Guid.Parse("73bce1de-143f-4903-928a-c34ceb3db42e"), "Mile End");
+
         var disruptionId = Guid.NewGuid();
-        var user1 = new User(Guid.NewGuid(), disruptionId, Severity.Minor, "+441234567890");
-        var user2 = new User(Guid.NewGuid(), disruptionId, Severity.Severe, "+441244562891");
+
+        var user1 = new User(
+            Guid.NewGuid(), 
+            disruptionId,
+            startStation,
+            endStation,
+            Severity.Minor, 
+            "+441234567890");
+
+
+        var user2 = new User(
+            Guid.NewGuid(), 
+            disruptionId,
+            startStation,
+            endStation,
+            Severity.Severe, 
+            "+441244562891");
 
         var users = new List<(User, TimeOnly)>
         {
@@ -97,8 +125,24 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
         var userNotifiedRepository = new UserNotifiedRepository(options);
 
         var disruptionId = Guid.NewGuid();
-        var user1 = new User(Guid.NewGuid(), disruptionId, Severity.Minor, "+441234567890");
-        var user2 = new User(Guid.NewGuid(), disruptionId, Severity.Severe, "+441244562891");
+        var startStation = new Station(Guid.Parse("44e87f5b-015d-42f8-a250-232e226de45b"), "Chancery Lane");
+        var endStation = new Station(Guid.Parse("73bce1de-143f-4903-928a-c34ceb3db42e"), "Mile End");
+
+        var user1 = new User(
+            Guid.NewGuid(),
+            disruptionId,
+            startStation,
+            endStation,
+            Severity.Minor, 
+            "+441234567890");
+
+        var user2 = new User(
+            Guid.NewGuid(),
+            disruptionId,
+            startStation,
+            endStation,
+            Severity.Severe, 
+            "+441244562891");
 
         var users = new List<(User, TimeOnly)>
         {
@@ -124,7 +168,16 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
         var repo = new UserNotifiedRepository(options);
 
         var disruptionId = Guid.NewGuid();
-        var user = new User(Guid.NewGuid(), disruptionId, Severity.Minor, "+441234567890");
+        var startStation = new Station(Guid.Parse("44e87f5b-015d-42f8-a250-232e226de45b"), "Chancery Lane");
+        var endStation = new Station(Guid.Parse("73bce1de-143f-4903-928a-c34ceb3db42e"), "Mile End");
+
+        var user = new User(
+            Guid.NewGuid(), 
+            disruptionId,
+            startStation,
+            endStation,
+            Severity.Minor, 
+            "+441234567890");
 
         var users = new List<(User, TimeOnly)>
         {
@@ -169,7 +222,16 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
         var repo = new UserNotifiedRepository(options);
 
         var disruptionId = Guid.NewGuid();
-        var user = new User(Guid.NewGuid(), disruptionId, Severity.Minor, "+441234567890");
+        var startStation = new Station(Guid.Parse("44e87f5b-015d-42f8-a250-232e226de45b"), "Chancery Lane");
+        var endStation = new Station(Guid.Parse("73bce1de-143f-4903-928a-c34ceb3db42e"), "Mile End");
+
+        var user = new User(
+            Guid.NewGuid(), 
+            disruptionId,
+            startStation,
+            endStation,
+            Severity.Minor, 
+            "+441234567890");
 
         var users1 = new List<(User, TimeOnly)>
         {
