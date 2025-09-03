@@ -21,6 +21,12 @@ public static class HostFactory
         builder.Services.Configure<SmsOptions>(
            builder.Configuration.GetSection("Sms"));
 
+        builder.Services.Configure<JwtOptions>(
+           builder.Configuration.GetSection("Jwt"));
+
+        builder.Services.Configure<WaterlooOptions>(
+            builder.Configuration.GetSection("Waterloo"));
+
         builder.Services.AddSingleton(sp =>
         {
             var options = sp.GetRequiredService<IOptions<ServiceBusOptions>>().Value;

@@ -3,7 +3,7 @@ using Bermondsey.Options;
 using CSharpFunctionalExtensions;
 using Microsoft.Extensions.Options;
 
-namespace Bermondsey;
+namespace Bermondsey.Clients;
 
 public interface ISmsClient
 {
