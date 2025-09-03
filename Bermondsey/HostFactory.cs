@@ -12,6 +12,9 @@ public static class HostFactory
         builder.Services.Configure<ServiceBusOptions>(
             builder.Configuration.GetSection("ServiceBus"));
 
+        builder.Services.Configure<RedisOptions>(
+            builder.Configuration.GetSection("Redis"));
+
         builder.Services.AddSingleton(sp =>
         {
             var options = sp.GetRequiredService<IOptions<ServiceBusOptions>>().Value;
