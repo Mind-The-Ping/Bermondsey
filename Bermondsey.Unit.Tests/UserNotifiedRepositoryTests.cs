@@ -157,4 +157,37 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
 
         result.Should().BeEmpty();
     }
+
+    [Fact]
+    public async Task UserNotifiedRepository_SaveUsersAsync_ShouldOverwrite_OnDuplicate()
+    {
+        var options = Microsoft.Extensions.Options.Options.Create(new RedisOptions
+        {
+            Connection = _redisContainer.GetConnectionString()
+        });
+
+        var repo = new UserNotifiedRepository(options);
+
+        var disruptionId = Guid.NewGuid();
+        var user = new User(Guid.NewGuid(), disruptionId, Severity.Minor, "+441234567890");
+
+        var users1 = new List<(User, TimeOnly)>
+        {
+            (user, TimeOnly.FromDateTime(DateTime.UtcNow.AddMinutes(10)))
+        };
+        await repo.SaveUsersAsync(users1);
+
+
+        var updatedUser = user with { Severity = Severity.Severe };
+        var users2 = new List<(User, TimeOnly)>
+        {
+            (updatedUser, TimeOnly.FromDateTime(DateTime.UtcNow.AddMinutes(20)))
+        };
+        await repo.SaveUsersAsync(users2);
+
+        var result = await repo.GetUsersByDisruptionIdAsync(disruptionId);
+
+        result.Should().ContainSingle()
+            .Which.Should().BeEquivalentTo(updatedUser);
+    }
 }
