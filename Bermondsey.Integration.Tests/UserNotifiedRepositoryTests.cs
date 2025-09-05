@@ -40,12 +40,14 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
 
         var userNotifiedRepository = new UserNotifiedRepository(options);
 
+        var line = new Line(Guid.Parse("c7f7c41a-03d2-4a79-9e8e-b55b1b5a056e"), "Central");
         var startStation = new Station(Guid.Parse("44e87f5b-015d-42f8-a250-232e226de45b"), "Chancery Lane");
         var endStation = new Station(Guid.Parse("73bce1de-143f-4903-928a-c34ceb3db42e"), "Mile End");
 
         var user = new User(
             Guid.NewGuid(), 
             Guid.NewGuid(), 
+            line,
             startStation, 
             endStation, 
             Severity.Minor, 
@@ -78,6 +80,7 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
 
         var userNotifiedRepository = new UserNotifiedRepository(options);
 
+        var line = new Line(Guid.Parse("c7f7c41a-03d2-4a79-9e8e-b55b1b5a056e"), "Central");
         var startStation = new Station(Guid.Parse("44e87f5b-015d-42f8-a250-232e226de45b"), "Chancery Lane");
         var endStation = new Station(Guid.Parse("73bce1de-143f-4903-928a-c34ceb3db42e"), "Mile End");
 
@@ -86,6 +89,7 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
         var user1 = new User(
             Guid.NewGuid(), 
             disruptionId,
+            line,
             startStation,
             endStation,
             Severity.Minor, 
@@ -95,6 +99,7 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
         var user2 = new User(
             Guid.NewGuid(), 
             disruptionId,
+            line,
             startStation,
             endStation,
             Severity.Severe, 
@@ -125,12 +130,15 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
         var userNotifiedRepository = new UserNotifiedRepository(options);
 
         var disruptionId = Guid.NewGuid();
+
+        var line = new Line(Guid.Parse("c7f7c41a-03d2-4a79-9e8e-b55b1b5a056e"), "Central");
         var startStation = new Station(Guid.Parse("44e87f5b-015d-42f8-a250-232e226de45b"), "Chancery Lane");
         var endStation = new Station(Guid.Parse("73bce1de-143f-4903-928a-c34ceb3db42e"), "Mile End");
 
         var user1 = new User(
             Guid.NewGuid(),
             disruptionId,
+            line,
             startStation,
             endStation,
             Severity.Minor, 
@@ -139,6 +147,7 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
         var user2 = new User(
             Guid.NewGuid(),
             disruptionId,
+            line,
             startStation,
             endStation,
             Severity.Severe, 
@@ -168,12 +177,15 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
         var repo = new UserNotifiedRepository(options);
 
         var disruptionId = Guid.NewGuid();
+
+        var line = new Line(Guid.Parse("c7f7c41a-03d2-4a79-9e8e-b55b1b5a056e"), "Central");
         var startStation = new Station(Guid.Parse("44e87f5b-015d-42f8-a250-232e226de45b"), "Chancery Lane");
         var endStation = new Station(Guid.Parse("73bce1de-143f-4903-928a-c34ceb3db42e"), "Mile End");
 
         var user = new User(
             Guid.NewGuid(), 
             disruptionId,
+            line,
             startStation,
             endStation,
             Severity.Minor, 
@@ -222,12 +234,15 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
         var repo = new UserNotifiedRepository(options);
 
         var disruptionId = Guid.NewGuid();
+
+        var line = new Line(Guid.Parse("c7f7c41a-03d2-4a79-9e8e-b55b1b5a056e"), "Central");
         var startStation = new Station(Guid.Parse("44e87f5b-015d-42f8-a250-232e226de45b"), "Chancery Lane");
         var endStation = new Station(Guid.Parse("73bce1de-143f-4903-928a-c34ceb3db42e"), "Mile End");
 
         var user = new User(
             Guid.NewGuid(), 
             disruptionId,
+            line,
             startStation,
             endStation,
             Severity.Minor, 

@@ -2,7 +2,8 @@
 
 public record User(
     Guid Id, 
-    Guid DisruptionId, 
+    Guid DisruptionId,
+    Line Line,
     Station StartStation,
     Station EndStation,
     Severity Severity,
