@@ -7,4 +7,5 @@ public record User(
     Station StartStation,
     Station EndStation,
     Severity Severity,
-    string PhoneNumber);
+    string PhoneNumber,
+    TimeOnly EndTime);

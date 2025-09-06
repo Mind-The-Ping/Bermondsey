@@ -51,11 +51,12 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
             startStation, 
             endStation, 
             Severity.Minor, 
-            "+441234567890");
+            "+441234567890",
+            TimeOnly.FromDateTime(DateTime.UtcNow.AddMinutes(30)));
 
-        var users = new List<(User, TimeOnly)>
+        var users = new List<User>
         {
-            (user,TimeOnly.FromDateTime(DateTime.UtcNow.AddMinutes(30)))
+            user
         };
 
         var result = await userNotifiedRepository.SaveUsersAsync(users);
@@ -93,7 +94,8 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
             startStation,
             endStation,
             Severity.Minor, 
-            "+441234567890");
+            "+441234567890",
+             TimeOnly.FromDateTime(DateTime.UtcNow.AddMinutes(30)));
 
 
         var user2 = new User(
@@ -103,12 +105,12 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
             startStation,
             endStation,
             Severity.Severe, 
-            "+441244562891");
+            "+441244562891",
+             TimeOnly.FromDateTime(DateTime.UtcNow.AddMinutes(45)));
 
-        var users = new List<(User, TimeOnly)>
+        var users = new List<User>
         {
-            (user1,TimeOnly.FromDateTime(DateTime.UtcNow.AddMinutes(30))),
-            (user2,TimeOnly.FromDateTime(DateTime.UtcNow.AddMinutes(45)))
+            user1, user2
         };
 
         await userNotifiedRepository.SaveUsersAsync(users);
@@ -142,7 +144,8 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
             startStation,
             endStation,
             Severity.Minor, 
-            "+441234567890");
+            "+441234567890", 
+            new TimeOnly(5, 15));
 
         var user2 = new User(
             Guid.NewGuid(),
@@ -151,12 +154,13 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
             startStation,
             endStation,
             Severity.Severe, 
-            "+441244562891");
+            "+441244562891", 
+            new TimeOnly(5, 15));
 
-        var users = new List<(User, TimeOnly)>
+        var users = new List<User>
         {
-            (user1,TimeOnly.FromDateTime(DateTime.UtcNow.AddMinutes(30))),
-            (user2,TimeOnly.FromDateTime(DateTime.UtcNow.AddMinutes(45)))
+            user1,
+            user2
         };
 
         await userNotifiedRepository.SaveUsersAsync(users);
@@ -189,11 +193,12 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
             startStation,
             endStation,
             Severity.Minor, 
-            "+441234567890");
+            "+441234567890", 
+             TimeOnly.FromDateTime(DateTime.UtcNow.AddSeconds(1)));
 
-        var users = new List<(User, TimeOnly)>
+        var users = new List<User>
         {
-            (user, TimeOnly.FromDateTime(DateTime.UtcNow.AddSeconds(2)))
+            user
         };
 
         await repo.SaveUsersAsync(users);
@@ -246,19 +251,20 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
             startStation,
             endStation,
             Severity.Minor, 
-            "+441234567890");
+            "+441234567890",
+            TimeOnly.FromDateTime(DateTime.UtcNow.AddMinutes(10)));
 
-        var users1 = new List<(User, TimeOnly)>
+        var users1 = new List<User>
         {
-            (user, TimeOnly.FromDateTime(DateTime.UtcNow.AddMinutes(10)))
+            user
         };
         await repo.SaveUsersAsync(users1);
 
 
         var updatedUser = user with { Severity = Severity.Severe };
-        var users2 = new List<(User, TimeOnly)>
+        var users2 = new List<User>
         {
-            (updatedUser, TimeOnly.FromDateTime(DateTime.UtcNow.AddMinutes(20)))
+            updatedUser
         };
         await repo.SaveUsersAsync(users2);
 

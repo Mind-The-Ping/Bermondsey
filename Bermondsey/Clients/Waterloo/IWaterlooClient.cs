@@ -1,7 +1,7 @@
 ﻿using Bermondsey.Models;
 using CSharpFunctionalExtensions;
 
-namespace Bermondsey.Clients;
+namespace Bermondsey.Clients.Waterloo;
 public interface IWaterlooClient
 {
     public Task<Result<IEnumerable<AffectedUser>>> GetAffectedUsersAsync(
