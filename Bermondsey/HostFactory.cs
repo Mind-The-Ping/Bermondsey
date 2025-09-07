@@ -1,5 +1,9 @@
 ﻿using Azure.Messaging.ServiceBus;
+using Bermondsey.Clients;
+using Bermondsey.Clients.Stratford;
+using Bermondsey.Clients.Waterloo;
 using Bermondsey.Options;
+using Bermondsey.Repositories;
 using Microsoft.Extensions.Options;
 
 namespace Bermondsey;
@@ -27,11 +31,23 @@ public static class HostFactory
         builder.Services.Configure<WaterlooOptions>(
             builder.Configuration.GetSection("Waterloo"));
 
+        builder.Services.Configure<StratfordOptions>(
+           builder.Configuration.GetSection("Stratford"));
+
         builder.Services.AddSingleton(sp =>
         {
             var options = sp.GetRequiredService<IOptions<ServiceBusOptions>>().Value;
             return new ServiceBusClient(options.ConnectionString);
         });
+
+        builder.Services.AddHttpClient();
+        builder.Services.AddScoped<TokenProvider>();
+        builder.Services.AddScoped<MessageFormatter>();
+        builder.Services.AddScoped<ISmsClient, RealSmsClient>();
+        builder.Services.AddScoped<IWaterlooClient, WaterlooClient>();
+        builder.Services.AddScoped<IStratfordClient, StratfordClient>();
+        builder.Services.AddScoped<IUserNotifiedRepository, UserNotifiedRepository>();
+        builder.Services.AddScoped<DisruptionNotifier>();
 
         builder.Services.AddHostedService<Worker>();
 

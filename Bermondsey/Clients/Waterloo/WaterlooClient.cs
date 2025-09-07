@@ -6,7 +6,7 @@ using Microsoft.Extensions.Options;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 
-namespace Bermondsey.Clients;
+namespace Bermondsey.Clients.Waterloo;
 public class WaterlooClient : IWaterlooClient
 {
     private readonly HttpClient _httpClient;

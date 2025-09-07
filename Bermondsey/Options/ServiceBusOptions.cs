@@ -10,6 +10,7 @@ public class ServiceBusOptions
 public class QueueOptions
 {
     public required string Disruptions { get; set; }
+    public required string Notifications { get; set; }
 }
 
 public class TopicOptions

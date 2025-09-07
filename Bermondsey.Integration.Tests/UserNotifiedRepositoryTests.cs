@@ -1,5 +1,6 @@
 ﻿using Bermondsey.Models;
 using Bermondsey.Options;
+using Bermondsey.Repositories;
 using FluentAssertions;
 using StackExchange.Redis;
 using System.Text.Json;
@@ -40,20 +41,23 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
 
         var userNotifiedRepository = new UserNotifiedRepository(options);
 
+        var line = new Line(Guid.Parse("c7f7c41a-03d2-4a79-9e8e-b55b1b5a056e"), "Central");
         var startStation = new Station(Guid.Parse("44e87f5b-015d-42f8-a250-232e226de45b"), "Chancery Lane");
         var endStation = new Station(Guid.Parse("73bce1de-143f-4903-928a-c34ceb3db42e"), "Mile End");
 
         var user = new User(
             Guid.NewGuid(), 
             Guid.NewGuid(), 
+            line,
             startStation, 
             endStation, 
             Severity.Minor, 
-            "+441234567890");
+            "+441234567890",
+            TimeOnly.FromDateTime(DateTime.UtcNow.AddMinutes(30)));
 
-        var users = new List<(User, TimeOnly)>
+        var users = new List<User>
         {
-            (user,TimeOnly.FromDateTime(DateTime.UtcNow.AddMinutes(30)))
+            user
         };
 
         var result = await userNotifiedRepository.SaveUsersAsync(users);
@@ -78,6 +82,7 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
 
         var userNotifiedRepository = new UserNotifiedRepository(options);
 
+        var line = new Line(Guid.Parse("c7f7c41a-03d2-4a79-9e8e-b55b1b5a056e"), "Central");
         var startStation = new Station(Guid.Parse("44e87f5b-015d-42f8-a250-232e226de45b"), "Chancery Lane");
         var endStation = new Station(Guid.Parse("73bce1de-143f-4903-928a-c34ceb3db42e"), "Mile End");
 
@@ -86,24 +91,27 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
         var user1 = new User(
             Guid.NewGuid(), 
             disruptionId,
+            line,
             startStation,
             endStation,
             Severity.Minor, 
-            "+441234567890");
+            "+441234567890",
+             TimeOnly.FromDateTime(DateTime.UtcNow.AddMinutes(30)));
 
 
         var user2 = new User(
             Guid.NewGuid(), 
             disruptionId,
+            line,
             startStation,
             endStation,
             Severity.Severe, 
-            "+441244562891");
+            "+441244562891",
+             TimeOnly.FromDateTime(DateTime.UtcNow.AddMinutes(45)));
 
-        var users = new List<(User, TimeOnly)>
+        var users = new List<User>
         {
-            (user1,TimeOnly.FromDateTime(DateTime.UtcNow.AddMinutes(30))),
-            (user2,TimeOnly.FromDateTime(DateTime.UtcNow.AddMinutes(45)))
+            user1, user2
         };
 
         await userNotifiedRepository.SaveUsersAsync(users);
@@ -125,29 +133,35 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
         var userNotifiedRepository = new UserNotifiedRepository(options);
 
         var disruptionId = Guid.NewGuid();
+
+        var line = new Line(Guid.Parse("c7f7c41a-03d2-4a79-9e8e-b55b1b5a056e"), "Central");
         var startStation = new Station(Guid.Parse("44e87f5b-015d-42f8-a250-232e226de45b"), "Chancery Lane");
         var endStation = new Station(Guid.Parse("73bce1de-143f-4903-928a-c34ceb3db42e"), "Mile End");
 
         var user1 = new User(
             Guid.NewGuid(),
             disruptionId,
+            line,
             startStation,
             endStation,
             Severity.Minor, 
-            "+441234567890");
+            "+441234567890", 
+            new TimeOnly(5, 15));
 
         var user2 = new User(
             Guid.NewGuid(),
             disruptionId,
+            line,
             startStation,
             endStation,
             Severity.Severe, 
-            "+441244562891");
+            "+441244562891", 
+            new TimeOnly(5, 15));
 
-        var users = new List<(User, TimeOnly)>
+        var users = new List<User>
         {
-            (user1,TimeOnly.FromDateTime(DateTime.UtcNow.AddMinutes(30))),
-            (user2,TimeOnly.FromDateTime(DateTime.UtcNow.AddMinutes(45)))
+            user1,
+            user2
         };
 
         await userNotifiedRepository.SaveUsersAsync(users);
@@ -168,20 +182,24 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
         var repo = new UserNotifiedRepository(options);
 
         var disruptionId = Guid.NewGuid();
+
+        var line = new Line(Guid.Parse("c7f7c41a-03d2-4a79-9e8e-b55b1b5a056e"), "Central");
         var startStation = new Station(Guid.Parse("44e87f5b-015d-42f8-a250-232e226de45b"), "Chancery Lane");
         var endStation = new Station(Guid.Parse("73bce1de-143f-4903-928a-c34ceb3db42e"), "Mile End");
 
         var user = new User(
             Guid.NewGuid(), 
             disruptionId,
+            line,
             startStation,
             endStation,
             Severity.Minor, 
-            "+441234567890");
+            "+441234567890", 
+             TimeOnly.FromDateTime(DateTime.UtcNow.AddSeconds(1)));
 
-        var users = new List<(User, TimeOnly)>
+        var users = new List<User>
         {
-            (user, TimeOnly.FromDateTime(DateTime.UtcNow.AddSeconds(2)))
+            user
         };
 
         await repo.SaveUsersAsync(users);
@@ -222,28 +240,32 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
         var repo = new UserNotifiedRepository(options);
 
         var disruptionId = Guid.NewGuid();
+
+        var line = new Line(Guid.Parse("c7f7c41a-03d2-4a79-9e8e-b55b1b5a056e"), "Central");
         var startStation = new Station(Guid.Parse("44e87f5b-015d-42f8-a250-232e226de45b"), "Chancery Lane");
         var endStation = new Station(Guid.Parse("73bce1de-143f-4903-928a-c34ceb3db42e"), "Mile End");
 
         var user = new User(
             Guid.NewGuid(), 
             disruptionId,
+            line,
             startStation,
             endStation,
             Severity.Minor, 
-            "+441234567890");
+            "+441234567890",
+            TimeOnly.FromDateTime(DateTime.UtcNow.AddMinutes(10)));
 
-        var users1 = new List<(User, TimeOnly)>
+        var users1 = new List<User>
         {
-            (user, TimeOnly.FromDateTime(DateTime.UtcNow.AddMinutes(10)))
+            user
         };
         await repo.SaveUsersAsync(users1);
 
 
         var updatedUser = user with { Severity = Severity.Severe };
-        var users2 = new List<(User, TimeOnly)>
+        var users2 = new List<User>
         {
-            (updatedUser, TimeOnly.FromDateTime(DateTime.UtcNow.AddMinutes(20)))
+            updatedUser
         };
         await repo.SaveUsersAsync(users2);
 

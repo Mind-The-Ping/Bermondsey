@@ -5,9 +5,9 @@ using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 using System.Text.Json;
 
-namespace Bermondsey;
+namespace Bermondsey.Repositories;
 
-public class UserNotifiedRepository
+public class UserNotifiedRepository : IUserNotifiedRepository
 {
     private readonly IDatabase _database;
 
@@ -23,20 +23,20 @@ public class UserNotifiedRepository
     private static string GetKey(User user) =>
        $"notified:{user.DisruptionId}:{user.Id}";
 
-    public async Task<Result> SaveUsersAsync(IEnumerable<(User user, TimeOnly endTime)> users)
+    public async Task<Result> SaveUsersAsync(IEnumerable<User> users)
     {
         var errors = new List<string>();
         var batch = _database.CreateBatch();
 
         var tasks = new List<Task>();
 
-        foreach (var (user, endTime) in users)
+        foreach (var user in users)
         {
             var key = GetKey(user);
             var value = JsonSerializer.Serialize(user);
 
             var now = DateTime.UtcNow;
-            var todayEndTime = now.Date.Add(endTime.ToTimeSpan());
+            var todayEndTime = now.Date.Add(user.EndTime.ToTimeSpan());
             var ttl = todayEndTime - now;
 
             if (ttl <= TimeSpan.Zero)
