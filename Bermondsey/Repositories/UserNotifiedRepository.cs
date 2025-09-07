@@ -5,9 +5,9 @@ using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 using System.Text.Json;
 
-namespace Bermondsey;
+namespace Bermondsey.Repositories;
 
-public class UserNotifiedRepository
+public class UserNotifiedRepository : IUserNotifiedRepository
 {
     private readonly IDatabase _database;
 

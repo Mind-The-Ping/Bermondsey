@@ -31,6 +31,10 @@ public class StratfordClient : IStratfordClient
 
     public async Task<Result<IEnumerable<UserDetails>>> GetUserDetailsAsync(IEnumerable<Guid> ids)
     {
+        if(!ids.Any()) {
+            return Result.Success(Enumerable.Empty<UserDetails>());
+        }
+
         _httpClient.DefaultRequestHeaders.Authorization =
               new AuthenticationHeaderValue("Bearer", _tokenProvider.CreateToken());
 

@@ -1,5 +1,6 @@
 ﻿using Bermondsey.Models;
 using Bermondsey.Options;
+using Bermondsey.Repositories;
 using FluentAssertions;
 using StackExchange.Redis;
 using System.Text.Json;

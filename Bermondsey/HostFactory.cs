@@ -3,6 +3,7 @@ using Bermondsey.Clients;
 using Bermondsey.Clients.Stratford;
 using Bermondsey.Clients.Waterloo;
 using Bermondsey.Options;
+using Bermondsey.Repositories;
 using Microsoft.Extensions.Options;
 
 namespace Bermondsey;
@@ -45,7 +46,7 @@ public static class HostFactory
         builder.Services.AddScoped<ISmsClient, RealSmsClient>();
         builder.Services.AddScoped<IWaterlooClient, WaterlooClient>();
         builder.Services.AddScoped<IStratfordClient, StratfordClient>();
-        builder.Services.AddScoped<UserNotifiedRepository>();
+        builder.Services.AddScoped<IUserNotifiedRepository, UserNotifiedRepository>();
         builder.Services.AddScoped<DisruptionNotifier>();
 
         builder.Services.AddHostedService<Worker>();

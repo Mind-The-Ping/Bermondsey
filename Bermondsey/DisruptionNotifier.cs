@@ -5,6 +5,7 @@ using Bermondsey.Clients.Waterloo;
 using Bermondsey.Messages;
 using Bermondsey.Models;
 using Bermondsey.Options;
+using Bermondsey.Repositories;
 using CSharpFunctionalExtensions;
 using Microsoft.Extensions.Options;
 
@@ -12,11 +13,12 @@ namespace Bermondsey;
 public class DisruptionNotifier
 {
     private readonly ISmsClient _smsClient;
+    private readonly TimeZoneInfo _londonTimeZone;
     private readonly IWaterlooClient _waterlooClient;
     private readonly IStratfordClient _stratfordClient;
     private readonly MessageFormatter _messageFormatter;
     private readonly ServiceBusSender _notificationSender;
-    private readonly UserNotifiedRepository _userNotifiedRepository;
+    private readonly IUserNotifiedRepository _userNotifiedRepository;
 
     public DisruptionNotifier(
         ISmsClient smsClient,
@@ -25,13 +27,14 @@ public class DisruptionNotifier
         IStratfordClient stratfordClient,
         MessageFormatter messageFormatter,
         IOptions<ServiceBusOptions> serviceBusOptions,
-        UserNotifiedRepository userNotifiedRepository)
+        IUserNotifiedRepository userNotifiedRepository)
     {
         _smsClient = smsClient;
         _waterlooClient = waterlooClient;
         _stratfordClient = stratfordClient;
         _messageFormatter = messageFormatter;
         _userNotifiedRepository = userNotifiedRepository;
+        _londonTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Europe/London");
         _notificationSender = busClient.CreateSender(serviceBusOptions.Value.Queues.Notifications);
     }
 
@@ -40,8 +43,7 @@ public class DisruptionNotifier
         var notifiedUsers = await _userNotifiedRepository
            .GetUsersByDisruptionIdAsync(disruption.Id);
 
-        var tzLondon = TimeZoneInfo.FindSystemTimeZoneById("Europe/London");
-        var localTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tzLondon);
+        var localTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, _londonTimeZone);
 
         var affectedUsers = await _waterlooClient
             .GetAffectedUsersAsync(disruption.Line.Id,
