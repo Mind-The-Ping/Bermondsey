@@ -57,8 +57,10 @@ public class DisruptionNotifier
             return Result.Failure($"Failed to get affected users : {affectedUsers.Error}");
         }
 
+        var ids = affectedUsers.Value.Select(x => x.Id);
+
         var userDetails = await _stratfordClient
-            .GetUserDetailsAsync(affectedUsers.Value.Select(x => x.Id));
+            .GetUserDetailsAsync(ids);
 
         if (userDetails.IsFailure) {
             return Result.Failure($"Failed to get users details : {userDetails.Error}");
@@ -81,23 +83,23 @@ public class DisruptionNotifier
             .ToDictionary(u => u.Id, u => u.PhoneNumber)
             ?? new Dictionary<Guid, string>();
 
-        foreach (var affectedUser in affectedUsers.Value)
+        foreach (var userToNotify in usersToNotify.Values)
         {
-            if (!phoneLookup.TryGetValue(affectedUser.Id, out var phoneNumber))
+            if (!phoneLookup.TryGetValue(userToNotify.Id, out var phoneNumber))
             {
-                errors.Add($"Failed to find phone number for {affectedUser.Id}");
+                errors.Add($"Failed to find phone number for {userToNotify.Id}");
                 continue;
             }
 
             var user = new User(
-                affectedUser.Id,
+                userToNotify.Id,
                 disruption.Id,
                 disruption.Line,
-                affectedUser.StartStation,
-                affectedUser.EndStation,
+                userToNotify.StartStation,
+                userToNotify.EndStation,
                 disruption.Severity,
                 phoneNumber,
-                affectedUser.EndTime);
+                userToNotify.EndTime);
 
             usersToNotify[user.Id] = user;
         }
