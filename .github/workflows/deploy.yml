@@ -26,11 +26,14 @@ jobs:
     - name: dotnet publish
       run: dotnet publish ./Bermondsey/Bermondsey.csproj -c Release -o ${{env.DOTNET_ROOT}}/myapp /p:DeleteExistingFiles=true
 
+    - name: Zip published output for WebJob
+      run: zip -r bermondsey-webjob.zip ${{env.DOTNET_ROOT}}/myapp
+
     - name: Upload artifact for deployment job
       uses: actions/upload-artifact@v4
       with:
-        name: .net-app
-        path: ${{env.DOTNET_ROOT}}/myapp
+        name: .net-webjob
+        path: bermondsey-webjob.zip
 
   deploy:
     runs-on: ubuntu-latest
@@ -53,11 +56,13 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_10B114341A1B4DCE9404AA8E0E87BE4C }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_8AF71521EDB14EA89B53DD2208EAADB3 }}
 
-      - name: Deploy to Azure Web App
-        id: deploy-to-webapp
+      - name: Deploy WebJob to Azure
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'bermondsey'
           slot-name: 'Production'
-          package: .
+          package: 'bermondsey-webjob.zip'
+          type: 'webjob'
+          webjob-name: 'DisruptionWorker'
+          webjob-type: 'continuous'
           
