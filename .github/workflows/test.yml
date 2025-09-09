@@ -1,0 +1,75 @@
+name: .NET Test - Bermondsey
+
+on:
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+  actions: read
+  checks: write
+
+env:
+  DOTNET_VERSION: '9.0.x'
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: '.' # root of your Azure Function project
+
+jobs:
+  build:
+    name: .NET Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Build and publish Azure Function
+        shell: pwsh
+        run: |
+          cd '${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}'
+          dotnet build --configuration Release
+          dotnet publish --configuration Release --output ./output /p:DeleteExistingFiles=true
+          cd -
+
+      - name: Set up Docker Compose
+        uses: docker/setup-compose-action@v1
+        with:
+          version: latest
+
+      - name: Bring up Docker Compose services
+        run: docker compose up -d
+
+  test:
+    name: .NET Test
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Run Unit Tests
+        run: dotnet test ./Bermondsey.Unit.Tests/Bermondsey.Unit.Tests.csproj --logger "trx;LogFileName=unit-tests.trx" --verbosity normal
+
+      - name: Run Integration Tests
+        run: dotnet test ./Bermondsey.Integration.Tests/Bermondsey.Integration.Tests.csproj --logger "trx;LogFileName=integration-tests.trx" --verbosity normal
+
+      - name: Upload All Test Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: all-test-results
+          path: '**/TestResults/*.trx'
+
+      - name: Test Report
+        uses: dorny/test-reporter@v2
+        if: ${{ !cancelled() }}
+        with:
+          artifact: all-test-results
+          name: DotNet Tests
+          path: '**/*.trx'
+          reporter: dotnet-trx
