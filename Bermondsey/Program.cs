@@ -1,3 +1,4 @@
+using Azure.Messaging.ServiceBus;
 using Bermondsey;
 using Bermondsey.Clients;
 using Bermondsey.Clients.Stratford;
@@ -31,6 +32,12 @@ builder.Services.Configure<WaterlooOptions>(
 
 builder.Services.Configure<StratfordOptions>(
    builder.Configuration.GetSection("Stratford"));
+
+builder.Services.AddSingleton(sp =>
+{
+    var serviceBusConnection = Environment.GetEnvironmentVariable("ServiceBusConnection");
+    return new ServiceBusClient(serviceBusConnection);
+});
 
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<TokenProvider>();
