@@ -34,19 +34,9 @@ public class DisruptionNotifierTests
 
         var serviceBusOptions = new ServiceBusOptions()
         {
-            ConnectionString = "test string",
             Queues = new QueueOptions()
             {
-                Disruptions = "queue.1",
                 Notifications = "queue.4",
-            },
-            Topics = new TopicOptions()
-            {
-                DisruptionEnds = new TopicSubscription()
-                {
-                    Name = "topic.1",
-                    Subscription = "subscription.2"
-                }
             }
         };
 
