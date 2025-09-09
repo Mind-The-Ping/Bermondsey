@@ -21,7 +21,7 @@ public class DisruptionConsumer
 
     [Function("DisruptionsConsumer")]
     public async Task DisruptionHandler(
-        [ServiceBusTrigger("%QueuesDisruptions%", Connection = "ServiceBusConnection")]
+        [ServiceBusTrigger("%QueueDisruptions%", Connection = "ServiceBusConnection")]
         ServiceBusReceivedMessage message,
         ServiceBusMessageActions messageActions)
     {
