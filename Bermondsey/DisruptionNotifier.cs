@@ -41,45 +41,35 @@ public class DisruptionNotifier
     public async Task<Result> NotifyDisruptionAsync(Disruption disruption)
     {
         var notifiedUsers = await _userNotifiedRepository
-           .GetUsersByDisruptionIdAsync(disruption.Id);
+        .GetUsersByDisruptionIdAsync(disruption.Id);
 
         var localTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, _londonTimeZone);
 
-        var affectedUsers = await _waterlooClient
-            .GetAffectedUsersAsync(disruption.Line.Id,
-                                   disruption.StartStationId,
-                                   disruption.EndStationId,
-                                   disruption.Severity,
-                                   TimeOnly.FromDateTime(DateTime.UtcNow),
-                                   localTime.DayOfWeek);
+        var affectedUsers = await _waterlooClient.GetAffectedUsersAsync(
+           disruption.Line.Id,
+           disruption.StartStationId,
+           disruption.EndStationId,
+           disruption.Severity,
+           TimeOnly.FromDateTime(DateTime.UtcNow),
+           localTime.DayOfWeek);
 
-        if(affectedUsers.IsFailure) {
+        if (affectedUsers.IsFailure) {
             return Result.Failure($"Failed to get affected users : {affectedUsers.Error}");
         }
 
-        var userDetails = await _stratfordClient
-            .GetUserDetailsAsync(affectedUsers.Value.Select(x => x.Id));
+        var userDetails = await _stratfordClient.GetUserDetailsAsync(
+            affectedUsers.Value.Select(x => x.Id));
 
         if (userDetails.IsFailure) {
             return Result.Failure($"Failed to get users details : {userDetails.Error}");
         }
 
-        var usersToNotify = new Dictionary<Guid, User>();
-
-        foreach (var notifiedUser in notifiedUsers)
-        {
-            if(notifiedUser.Severity == disruption.Severity) {
-                continue;
-            }
-
-            usersToNotify[notifiedUser.Id] = notifiedUser;
-        }
-
-        var errors = new List<string>();
-
         var phoneLookup = userDetails.Value?
-            .ToDictionary(u => u.Id, u => u.PhoneNumber)
-            ?? new Dictionary<Guid, string>();
+        .ToDictionary(u => u.Id, u => u.PhoneNumber)
+        ?? new Dictionary<Guid, string>();
+
+        var usersToNotify = new Dictionary<Guid, User>();
+        var errors = new List<string>();
 
         foreach (var affectedUser in affectedUsers.Value)
         {
@@ -102,21 +92,30 @@ public class DisruptionNotifier
             usersToNotify[user.Id] = user;
         }
 
+        foreach (var oldUser in notifiedUsers)
+        {
+            if (!usersToNotify.ContainsKey(oldUser.Id) &&
+                 oldUser.Severity != disruption.Severity)
+            {
+                usersToNotify[oldUser.Id] = oldUser;
+            }
+        }
+
         var finalUsersToNotify = usersToNotify.Values.ToList();
 
         foreach (var user in finalUsersToNotify)
         {
             var message = _messageFormatter.FormatDisruption(
-               user.Line.Name,
-               user.StartStation.Name,
-               user.EndStation.Name,
-               user.Severity);
+                user.Line.Name,
+                user.StartStation.Name,
+                user.EndStation.Name,
+                user.Severity);
 
             var messageResult = await _smsClient.SendAsync(user.PhoneNumber, message);
+
             if (messageResult.IsFailure)
             {
-                errors.Add($"Failed to send notification to {user.PhoneNumber} " +
-                    $": {messageResult.Error}.");
+                errors.Add($"Failed to send notification to {user.PhoneNumber}: {messageResult.Error}.");
 
                 await PublishNotificationMessageAsync(
                     Guid.NewGuid(),
@@ -132,21 +131,21 @@ public class DisruptionNotifier
             }
 
             await PublishNotificationMessageAsync(
-                    Guid.NewGuid(),
-                    user.Id,
-                    user.Line.Id,
-                    user.DisruptionId,
-                    user.StartStation.Id,
-                    user.EndStation.Id,
-                    disruption.SeverityId,
-                    NotificationSentBy.Sms);
+                Guid.NewGuid(),
+                user.Id,
+                user.Line.Id,
+                user.DisruptionId,
+                user.StartStation.Id,
+                user.EndStation.Id,
+                disruption.SeverityId,
+                NotificationSentBy.Sms);
         }
 
         await _userNotifiedRepository.SaveUsersAsync(finalUsersToNotify);
 
         return errors.Count != 0
-           ? Result.Failure(string.Join("; ", errors))
-           : Result.Success();
+            ? Result.Failure(string.Join("; ", errors))
+            : Result.Success();
     }
 
     public async Task<Result> NotifyDisruptionResolvedAsync(DisruptionEnd disruptionEnd)
