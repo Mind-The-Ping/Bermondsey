@@ -41,7 +41,7 @@ public class DisruptionNotifier
     public async Task<Result> NotifyDisruptionAsync(Disruption disruption)
     {
         var notifiedUsers = await _userNotifiedRepository
-        .GetUsersByDisruptionIdAsync(disruption.Id);
+            .GetUsersByDisruptionIdAsync(disruption.Id);
 
         var localTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, _londonTimeZone);
 
@@ -57,48 +57,56 @@ public class DisruptionNotifier
             return Result.Failure($"Failed to get affected users : {affectedUsers.Error}");
         }
 
+        var newUsers = affectedUsers.Value.ToList();
+        var usersToNotify = new Dictionary<Guid, User>();
+
+        foreach (var notifiedUser in notifiedUsers)
+        {
+            if (notifiedUser.Severity == disruption.Severity)
+            {
+                var newUser = newUsers.SingleOrDefault(x => x.Id == notifiedUser.Id);
+                if (newUser is not null) {
+                    newUsers.Remove(newUser);
+                }
+                continue;
+            }
+
+            usersToNotify[notifiedUser.Id] = notifiedUser;
+        }
+
+
         var userDetails = await _stratfordClient.GetUserDetailsAsync(
-            affectedUsers.Value.Select(x => x.Id));
+            newUsers.Select(x => x.Id));
 
         if (userDetails.IsFailure) {
             return Result.Failure($"Failed to get users details : {userDetails.Error}");
         }
 
         var phoneLookup = userDetails.Value?
-        .ToDictionary(u => u.Id, u => u.PhoneNumber)
-        ?? new Dictionary<Guid, string>();
+          .ToDictionary(u => u.Id, u => u.PhoneNumber)
+          ?? new Dictionary<Guid, string>();
 
-        var usersToNotify = new Dictionary<Guid, User>();
         var errors = new List<string>();
 
-        foreach (var affectedUser in affectedUsers.Value)
+        foreach (var newUser in newUsers)
         {
-            if (!phoneLookup.TryGetValue(affectedUser.Id, out var phoneNumber))
+            if (!phoneLookup.TryGetValue(newUser.Id, out var phoneNumber))
             {
-                errors.Add($"Failed to find phone number for {affectedUser.Id}");
+                errors.Add($"Failed to find phone number for {newUser.Id}");
                 continue;
             }
 
             var user = new User(
-                affectedUser.Id,
+                newUser.Id,
                 disruption.Id,
                 disruption.Line,
-                affectedUser.StartStation,
-                affectedUser.EndStation,
+                newUser.StartStation,
+                newUser.EndStation,
                 disruption.Severity,
                 phoneNumber,
-                affectedUser.EndTime);
+                newUser.EndTime);
 
             usersToNotify[user.Id] = user;
-        }
-
-        foreach (var oldUser in notifiedUsers)
-        {
-            if (!usersToNotify.ContainsKey(oldUser.Id) &&
-                 oldUser.Severity != disruption.Severity)
-            {
-                usersToNotify[oldUser.Id] = oldUser;
-            }
         }
 
         var finalUsersToNotify = usersToNotify.Values.ToList();
