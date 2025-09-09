@@ -61,7 +61,7 @@ jobs:
         with:
           app-name: 'bermondsey'
           slot-name: 'Production'
-          package: 'bermondsey-webjob.zip'
+          package: './bermondsey-webjob.zip'
           type: 'webjob'
           webjob-name: 'DisruptionWorker'
           webjob-type: 'continuous'
