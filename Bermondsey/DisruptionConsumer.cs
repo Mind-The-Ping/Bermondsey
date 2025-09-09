@@ -52,7 +52,6 @@ public class DisruptionConsumer
 
         await _notifier.NotifyDisruptionResolvedAsync(messageJson!);
 
-        // Complete the message
         await messageActions.CompleteMessageAsync(message);
     }
 }
