@@ -9,6 +9,8 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
+using StackExchange.Redis;
 
 var builder = FunctionsApplication.CreateBuilder(args);
 
@@ -37,6 +39,15 @@ builder.Services.AddSingleton(sp =>
 {
     var serviceBusConnection = Environment.GetEnvironmentVariable("ServiceBusConnection");
     return new ServiceBusClient(serviceBusConnection);
+});
+
+builder.Services.AddSingleton(sp =>
+{
+    var options = sp.GetRequiredService<IOptions<RedisOptions>>().Value;
+    var configOptions = ConfigurationOptions.Parse(options.Connection);
+    configOptions.AbortOnConnectFail = false;
+
+    return ConnectionMultiplexer.Connect(configOptions);
 });
 
 builder.Services.AddHttpClient();

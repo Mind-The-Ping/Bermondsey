@@ -1,7 +1,5 @@
 ﻿using Bermondsey.Models;
-using Bermondsey.Options;
 using CSharpFunctionalExtensions;
-using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 using System.Text.Json;
 
@@ -11,12 +9,8 @@ public class UserNotifiedRepository : IUserNotifiedRepository
 {
     private readonly IDatabase _database;
 
-    public UserNotifiedRepository(IOptions<RedisOptions> options)
+    public UserNotifiedRepository(ConnectionMultiplexer redis)
     {
-        var redisOptions = options.Value ??
-            throw new ArgumentNullException(nameof(options));
-
-        var redis = ConnectionMultiplexer.Connect(redisOptions.Connection);
         _database = redis.GetDatabase();
     }
 

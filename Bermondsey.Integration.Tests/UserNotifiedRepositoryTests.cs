@@ -34,12 +34,7 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
         var redis = ConnectionMultiplexer.Connect(_redisContainer.GetConnectionString());
         var database = redis.GetDatabase();
 
-        var options = Microsoft.Extensions.Options.Options.Create(new RedisOptions
-        {
-            Connection = _redisContainer.GetConnectionString()
-        });
-
-        var userNotifiedRepository = new UserNotifiedRepository(options);
+        var userNotifiedRepository = new UserNotifiedRepository(redis);
 
         var line = new Line(Guid.Parse("c7f7c41a-03d2-4a79-9e8e-b55b1b5a056e"), "Central");
         var startStation = new Station(Guid.Parse("44e87f5b-015d-42f8-a250-232e226de45b"), "Chancery Lane");
@@ -75,12 +70,8 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
     [Fact]
     public async Task UserNotifiedRepository_GetUsersByDisruptionIdAsync_Successfully()
     {
-        var options = Microsoft.Extensions.Options.Options.Create(new RedisOptions
-        {
-            Connection = _redisContainer.GetConnectionString()
-        });
-
-        var userNotifiedRepository = new UserNotifiedRepository(options);
+        var multiplexer = ConnectionMultiplexer.Connect(_redisContainer.GetConnectionString());
+        var userNotifiedRepository = new UserNotifiedRepository(multiplexer);
 
         var line = new Line(Guid.Parse("c7f7c41a-03d2-4a79-9e8e-b55b1b5a056e"), "Central");
         var startStation = new Station(Guid.Parse("44e87f5b-015d-42f8-a250-232e226de45b"), "Chancery Lane");
@@ -125,12 +116,8 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
     [Fact]
     public async Task UserNotifiedRepository_DeleteByDisruptionIdAsync_Successfully()
     {
-        var options = Microsoft.Extensions.Options.Options.Create(new RedisOptions
-        {
-            Connection = _redisContainer.GetConnectionString()
-        });
-
-        var userNotifiedRepository = new UserNotifiedRepository(options);
+        var multiplexer = ConnectionMultiplexer.Connect(_redisContainer.GetConnectionString());
+        var userNotifiedRepository = new UserNotifiedRepository(multiplexer);
 
         var disruptionId = Guid.NewGuid();
 
@@ -174,12 +161,8 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
     [Fact]
     public async Task UserNotifiedRepository_Keys_ShouldExpire_AfterTTL()
     {
-        var options = Microsoft.Extensions.Options.Options.Create(new RedisOptions
-        {
-            Connection = _redisContainer.GetConnectionString()
-        });
-
-        var repo = new UserNotifiedRepository(options);
+        var multiplexer = ConnectionMultiplexer.Connect(_redisContainer.GetConnectionString());
+        var repo = new UserNotifiedRepository(multiplexer);
 
         var disruptionId = Guid.NewGuid();
 
@@ -213,12 +196,8 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
     [Fact]
     public async Task UserNotifiedRepository_DeleteByDisruptionIdAsync_ShouldNotFail_WhenNoUsers()
     {
-        var options = Microsoft.Extensions.Options.Options.Create(new RedisOptions
-        {
-            Connection = _redisContainer.GetConnectionString()
-        });
-
-        var repo = new UserNotifiedRepository(options);
+        var multiplexer = ConnectionMultiplexer.Connect(_redisContainer.GetConnectionString());
+        var repo = new UserNotifiedRepository(multiplexer);
 
         var disruptionId = Guid.NewGuid();
 
@@ -232,12 +211,8 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
     [Fact]
     public async Task UserNotifiedRepository_SaveUsersAsync_ShouldOverwrite_OnDuplicate()
     {
-        var options = Microsoft.Extensions.Options.Options.Create(new RedisOptions
-        {
-            Connection = _redisContainer.GetConnectionString()
-        });
-
-        var repo = new UserNotifiedRepository(options);
+        var multiplexer = ConnectionMultiplexer.Connect(_redisContainer.GetConnectionString());
+        var repo = new UserNotifiedRepository(multiplexer);
 
         var disruptionId = Guid.NewGuid();
 
