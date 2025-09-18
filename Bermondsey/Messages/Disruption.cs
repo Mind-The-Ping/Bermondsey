@@ -7,4 +7,5 @@ public record Disruption(
     Guid StartStationId,
     Guid EndStationId,
     Severity Severity,
-    Guid SeverityId);
+    Guid SeverityId,
+    Guid DescriptionId);

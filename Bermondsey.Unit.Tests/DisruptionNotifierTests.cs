@@ -120,6 +120,7 @@ public class DisruptionNotifierTests
             _startStation.Id,
             _endStation.Id,
             Severity.Suspended,
+            Guid.NewGuid(),
             Guid.NewGuid());
 
         await disruptionNotifer.NotifyDisruptionAsync(disruption);
@@ -169,6 +170,7 @@ public class DisruptionNotifierTests
          _startStation.Id,
          _endStation.Id,
          severity,
+         Guid.NewGuid(),
          Guid.NewGuid());
 
         var users = new List<User>
@@ -284,6 +286,7 @@ public class DisruptionNotifierTests
            _startStation.Id,
            _endStation.Id,
            Severity.Minor,
+           Guid.NewGuid(),
            Guid.NewGuid());
 
         var users = new List<User>
@@ -371,7 +374,8 @@ public class DisruptionNotifierTests
            _startStation.Id,
            _endStation.Id,
            Severity.Minor,
-           severityId);
+           severityId,
+           Guid.NewGuid());
 
         var users = new List<User>
         {
@@ -453,7 +457,8 @@ public class DisruptionNotifierTests
            _startStation.Id,
            _endStation.Id,
            Severity.Minor,
-           severityId);
+           severityId,
+           Guid.NewGuid());
 
         var users = new List<User>
         {

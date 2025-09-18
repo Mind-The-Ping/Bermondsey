@@ -16,5 +16,6 @@ public record Notification(
     Guid StartStationId,
     Guid EndStationId,
     Guid SeverityId,
+    Guid DescriptionId,
     NotificationSentBy NotificationSentBy,
     DateTime SentTime);
