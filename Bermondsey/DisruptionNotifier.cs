@@ -133,6 +133,7 @@ public class DisruptionNotifier
                     user.StartStation.Id,
                     user.EndStation.Id,
                     disruption.SeverityId,
+                    disruption.DescriptionId,
                     NotificationSentBy.Failed);
 
                 continue;
@@ -146,6 +147,7 @@ public class DisruptionNotifier
                 user.StartStation.Id,
                 user.EndStation.Id,
                 disruption.SeverityId,
+                disruption.DescriptionId,
                 NotificationSentBy.Sms);
         }
 
@@ -193,6 +195,7 @@ public class DisruptionNotifier
         Guid startStationId,
         Guid endStationId,
         Guid severityId,
+        Guid descriptionId,
         NotificationSentBy notificationSentBy)
     {
         var dto = new Notification(
@@ -203,6 +206,7 @@ public class DisruptionNotifier
             startStationId,
             endStationId,
             severityId,
+            descriptionId,
             notificationSentBy,
             DateTime.UtcNow);
 
