@@ -186,7 +186,7 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
         };
 
         await repo.SaveUsersAsync(users);
-        await Task.Delay(3000);
+        await Task.Delay(70000);
 
         var result = await repo.GetUsersByDisruptionIdAsync(disruptionId);
 

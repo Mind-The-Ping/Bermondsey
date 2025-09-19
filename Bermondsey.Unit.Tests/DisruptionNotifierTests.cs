@@ -601,4 +601,73 @@ public class DisruptionNotifierTests
         var disruptionId = (Guid)disruptionDeleted.Last().GetArguments()[0]!;
         disruptionId.Should().Be(disruptionEnd.Id);
     }
+
+    [Fact]
+    public async Task DisruptionNotifier_NotifyDisruptionAsync_TimeExpired_Does_Not_Send()
+    {
+        var severityId = Guid.NewGuid();
+
+        var disruption = new Disruption(
+           Guid.NewGuid(),
+           _line,
+           _startStation.Id,
+           _endStation.Id,
+           Severity.Minor,
+           severityId,
+           Guid.NewGuid());
+
+        var notifiedRepository = Substitute.For<IUserNotifiedRepository>();
+
+        notifiedRepository.GetUsersByDisruptionIdAsync(Arg.Any<Guid>())
+            .Returns(Enumerable.Empty<User>());
+
+        notifiedRepository.SaveUsersAsync(Arg.Any<IEnumerable<User>>())
+            .Returns(Result.Success());
+
+        notifiedRepository.DeleteByDisruptionIdAsync(Arg.Any<Guid>())
+            .Returns(Task.CompletedTask);
+
+        var thirtyMinutesAgo = TimeOnly.FromDateTime(DateTime.UtcNow.AddMinutes(-30));
+
+        var affectedUsers = new List<AffectedUser>
+        {
+            new(Guid.NewGuid(), _startStation, _endStation, thirtyMinutesAgo),
+        };
+
+        var waterlooClient = Substitute.For<IWaterlooClient>();
+        waterlooClient.GetAffectedUsersAsync(
+            Arg.Any<Guid>(),
+            Arg.Any<Guid>(),
+            Arg.Any<Guid>(),
+            Arg.Any<Severity>(),
+            Arg.Any<TimeOnly>(),
+            Arg.Any<DayOfWeek>())
+            .Returns(Result.Success<IEnumerable<AffectedUser>>(affectedUsers));
+
+        var userDetails = new List<UserDetails>
+        {
+            new(affectedUsers.First().Id, "+447345678901", PhoneOS.Android),
+        };
+
+        var stratfordClient = Substitute.For<IStratfordClient>();
+        stratfordClient.GetUserDetailsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(Result.Success<IEnumerable<UserDetails>>(userDetails));
+
+        var disruptionNotifer = new DisruptionNotifier(
+         _smsClient,
+         _serviceBusClient,
+         waterlooClient,
+         stratfordClient,
+         _messagerFormatter,
+         _iServiceBusOptions,
+         notifiedRepository);
+
+        await disruptionNotifer.NotifyDisruptionAsync(disruption);
+
+        var notificationsSent = _notificationSender.ReceivedCalls();
+        notificationsSent.Should().HaveCount(0);
+
+        var smsSent = _smsClient.ReceivedCalls();
+        smsSent.Should().HaveCount(0);
+    }
 }

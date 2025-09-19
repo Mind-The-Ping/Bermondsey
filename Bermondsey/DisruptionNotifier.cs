@@ -113,6 +113,15 @@ public class DisruptionNotifier
 
         foreach (var user in finalUsersToNotify)
         {
+            var now = TimeOnly.FromDateTime(DateTime.UtcNow);
+            now = new TimeOnly(now.Hour, now.Minute);
+
+            var end = new TimeOnly(user.EndTime.Hour, user.EndTime.Minute);
+
+            if (end <= now) {
+                continue;
+            }
+
             var message = _messageFormatter.FormatDisruption(
                 user.Line.Name,
                 user.StartStation.Name,
