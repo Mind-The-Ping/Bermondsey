@@ -31,7 +31,7 @@ public class UserNotifiedRepository : IUserNotifiedRepository
 
             var now = DateTime.UtcNow;
             var todayEndTime = now.Date.Add(user.EndTime.ToTimeSpan());
-            var ttl = (todayEndTime - now);
+            var ttl = todayEndTime - now;
 
             if (ttl <= TimeSpan.Zero)
             {
