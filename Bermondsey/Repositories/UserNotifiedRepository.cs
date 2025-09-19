@@ -39,7 +39,7 @@ public class UserNotifiedRepository : IUserNotifiedRepository
                 continue;
             }
 
-            var stringSetTask = batch.StringSetAsync(key, value, ttl);
+            var stringSetTask = batch.StringSetAsync(key, value, ttl + TimeSpan.FromMinutes(1));
             var setAddTask = batch.SetAddAsync($"notified_index:{user.DisruptionId}", key);
 
             tasks.Add(stringSetTask.ContinueWith(t =>
