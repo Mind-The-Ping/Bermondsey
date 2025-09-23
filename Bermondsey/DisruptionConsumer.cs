@@ -29,11 +29,20 @@ public class DisruptionConsumer
         _logger.LogInformation("Message Body: {body}", message.Body);
         _logger.LogInformation("Message Content-Type: {contentType}", message.ContentType);
 
-        var json = message.Body.ToArray();
-        var messageJson = JsonSerializer.Deserialize<Disruption>(json);
 
-        await _notifier.NotifyDisruptionAsync(messageJson!);
+        try
+        {
+            var json = message.Body.ToArray();
+            var messageJson = JsonSerializer.Deserialize<Disruption>(json);
+            var result = await _notifier.NotifyDisruptionAsync(messageJson!);
 
+            if(result.IsFailure) {
+                _logger.LogError(result.Error);
+            }
+        }
+        catch (Exception ex) {
+            _logger.LogError(ex, "Could not deserialize disruption.");
+        }
         await messageActions.CompleteMessageAsync(message);
     }
 
@@ -47,10 +56,19 @@ public class DisruptionConsumer
         _logger.LogInformation("Message Body: {body}", message.Body);
         _logger.LogInformation("Message Content-Type: {contentType}", message.ContentType);
 
-        var json = message.Body.ToArray();
-        var messageJson = JsonSerializer.Deserialize<DisruptionEnd>(json);
+        try
+        {
+            var json = message.Body.ToArray();
+            var messageJson = JsonSerializer.Deserialize<DisruptionEnd>(json);
+            var result = await _notifier.NotifyDisruptionResolvedAsync(messageJson!);
 
-        await _notifier.NotifyDisruptionResolvedAsync(messageJson!);
+            if (result.IsFailure) {
+                _logger.LogError(result.Error);
+            }
+        }
+        catch (Exception ex) {
+            _logger.LogError(ex, "Could not deserialize disruption.");
+        }
 
         await messageActions.CompleteMessageAsync(message);
     }
