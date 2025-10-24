@@ -104,7 +104,8 @@ public class DisruptionNotifier
                 newUser.EndStation,
                 disruption.Severity,
                 phoneNumber,
-                newUser.EndTime);
+                newUser.EndTime,
+                newUser.AffectedStations);
 
             usersToNotify[user.Id] = user;
         }
@@ -143,7 +144,8 @@ public class DisruptionNotifier
                     user.EndStation.Id,
                     disruption.SeverityId,
                     disruption.DescriptionId,
-                    NotificationSentBy.Failed);
+                    NotificationSentBy.Failed,
+                    user.AffectedStations.Select(x => x.Id).ToList());
 
                 continue;
             }
@@ -157,7 +159,8 @@ public class DisruptionNotifier
                 user.EndStation.Id,
                 disruption.SeverityId,
                 disruption.DescriptionId,
-                NotificationSentBy.Sms);
+                NotificationSentBy.Sms,
+                user.AffectedStations.Select(x => x.Id).ToList());
         }
 
         await _userNotifiedRepository.SaveUsersAsync(finalUsersToNotify);
@@ -205,7 +208,8 @@ public class DisruptionNotifier
         Guid endStationId,
         Guid severityId,
         Guid descriptionId,
-        NotificationSentBy notificationSentBy)
+        NotificationSentBy notificationSentBy,
+        IList<Guid> affectedStationsId)
     {
         var dto = new Notification(
             id,
@@ -217,7 +221,8 @@ public class DisruptionNotifier
             severityId,
             descriptionId,
             notificationSentBy,
-            DateTime.UtcNow);
+            DateTime.UtcNow,
+            affectedStationsId);
 
         var message = BinaryData.FromObjectAsJson(dto);
 
