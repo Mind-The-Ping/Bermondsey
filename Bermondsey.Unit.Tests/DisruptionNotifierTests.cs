@@ -25,6 +25,7 @@ public class DisruptionNotifierTests
     private readonly Station _startStation;
     private readonly Station _endStation;
     private readonly TimeOnly _endTime;
+    private readonly IEnumerable<Station> _affectedStations;
 
     public DisruptionNotifierTests()
     {
@@ -62,6 +63,12 @@ public class DisruptionNotifierTests
         _startStation = new Station(Guid.Parse("73bce1de-143f-4903-928a-c34ceb3db42e"), "Mile End");
         _endStation = new Station(Guid.Parse("968bc258-138c-45cf-83c0-599705285d25"), "West Ham");
         _endTime = TimeOnly.FromDateTime(DateTime.UtcNow.AddMinutes(30));
+        _affectedStations = [
+            new Station(Guid.Parse("73bce1de-143f-4903-928a-c34ceb3db42e"), "Mile End"),
+            new Station(Guid.Parse("3db408d6-248a-4ef7-8486-203e87cc408a"), "Bow Road"),
+            new Station(Guid.Parse("a391396c-6921-4202-ace2-2d5033bfac1f"), "Bromley By Bow"),
+            new Station(Guid.Parse("968bc258-138c-45cf-83c0-599705285d25"), "West Ham"),
+            ];
     }
 
 
@@ -81,8 +88,8 @@ public class DisruptionNotifierTests
 
         var affectedUsers = new List<AffectedUser>
         {
-            new(Guid.NewGuid(), _startStation, _endStation, _endTime),
-            new(Guid.NewGuid(),  _startStation, _endStation, _endTime)
+            new(Guid.NewGuid(), _startStation, _endStation, _affectedStations, _endTime),
+            new(Guid.NewGuid(), _startStation, _endStation, _affectedStations, _endTime)
         };
 
         var waterlooClient = Substitute.For<IWaterlooClient>();
@@ -137,6 +144,7 @@ public class DisruptionNotifierTests
         notification1!.StartStationId.Should().Be(_startStation.Id);
         notification1!.EndStationId.Should().Be(_endStation.Id);
         notification1!.NotificationSentBy.Should().Be(NotificationSentBy.Sms);
+        notification1!.AffectedStationIds.Should().BeEquivalentTo(_affectedStations.Select(x => x.Id).ToList());
 
         var message2 = (ServiceBusMessage)notificationsSents.Last().GetArguments()[0]!;
         var notification2 = message2.Body.ToObjectFromJson<Notification>();
@@ -147,6 +155,7 @@ public class DisruptionNotifierTests
         notification2!.StartStationId.Should().Be(_startStation.Id);
         notification2!.EndStationId.Should().Be(_endStation.Id);
         notification2!.NotificationSentBy.Should().Be(NotificationSentBy.Sms);
+        notification2!.AffectedStationIds.Should().BeEquivalentTo(_affectedStations.Select(x => x.Id).ToList());
 
         var notifyRepoCalled = notifiedRepository.ReceivedCalls();
         notifyRepoCalled.Should().HaveCount(2);
@@ -183,7 +192,8 @@ public class DisruptionNotifierTests
                 _endStation,
                 severity,
                 "+447123456789",
-                _endTime),
+                _endTime,
+                _affectedStations),
             new User(
                 Guid.NewGuid(),
                 disruption.Id,
@@ -192,7 +202,8 @@ public class DisruptionNotifierTests
                 _endStation,
                 severity,
                  "+447234567890",
-                _endTime),
+                _endTime,
+                _affectedStations),
         };
 
         var notifiedRepository = Substitute.For<IUserNotifiedRepository>();
@@ -208,8 +219,8 @@ public class DisruptionNotifierTests
 
         var affectedUsers = new List<AffectedUser>
         {
-            new(Guid.NewGuid(), _startStation, _endStation, _endTime),
-            new(Guid.NewGuid(), _startStation, _endStation, _endTime)
+            new(Guid.NewGuid(), _startStation, _endStation, _affectedStations, _endTime),
+            new(Guid.NewGuid(), _startStation, _endStation, _affectedStations, _endTime)
         };
 
         var waterlooClient = Substitute.For<IWaterlooClient>();
@@ -255,6 +266,7 @@ public class DisruptionNotifierTests
         notification1!.StartStationId.Should().Be(_startStation.Id);
         notification1!.EndStationId.Should().Be(_endStation.Id);
         notification1!.NotificationSentBy.Should().Be(NotificationSentBy.Sms);
+        notification1!.AffectedStationIds.Should().BeEquivalentTo(_affectedStations.Select(x => x.Id).ToList());
 
         var message2 = (ServiceBusMessage)notificationsSents.Last().GetArguments()[0]!;
         var notification2 = message2.Body.ToObjectFromJson<Notification>();
@@ -265,6 +277,7 @@ public class DisruptionNotifierTests
         notification2!.StartStationId.Should().Be(_startStation.Id);
         notification2!.EndStationId.Should().Be(_endStation.Id);
         notification2!.NotificationSentBy.Should().Be(NotificationSentBy.Sms);
+        notification2!.AffectedStationIds.Should().BeEquivalentTo(_affectedStations.Select(x => x.Id).ToList());
 
         var notifyRepoCalled = notifiedRepository.ReceivedCalls();
         notifyRepoCalled.Should().HaveCount(2);
@@ -299,7 +312,8 @@ public class DisruptionNotifierTests
                 _endStation,
                 Severity.Severe,
                 "+447123456789",
-                _endTime),
+                _endTime,
+                _affectedStations),
             new User(
                 Guid.NewGuid(),
                 disruption.Id,
@@ -308,7 +322,8 @@ public class DisruptionNotifierTests
                 _endStation,
                 Severity.Severe,
                  "+447234567890",
-                _endTime),
+                _endTime,
+                _affectedStations),
         };
 
         var notifiedRepository = Substitute.For<IUserNotifiedRepository>();
@@ -324,8 +339,8 @@ public class DisruptionNotifierTests
 
         var affectedUsers = new List<AffectedUser>
         {
-            new(Guid.NewGuid(), _startStation, _endStation, _endTime),
-            new(Guid.NewGuid(), _startStation, _endStation, _endTime)
+            new(Guid.NewGuid(), _startStation, _endStation, _affectedStations, _endTime),
+            new(Guid.NewGuid(), _startStation, _endStation, _affectedStations, _endTime)
         };
 
         var waterlooClient = Substitute.For<IWaterlooClient>();
@@ -387,7 +402,8 @@ public class DisruptionNotifierTests
                 _endStation,
                 Severity.Severe,
                 "+447123456789",
-                _endTime)
+                _endTime,
+                _affectedStations)
         };
 
         var notifiedRepository = Substitute.For<IUserNotifiedRepository>();
@@ -403,7 +419,7 @@ public class DisruptionNotifierTests
 
         var affectedUsers = new List<AffectedUser>
         {
-            new(users.First().Id, _startStation, _endStation, _endTime),
+            new(users.First().Id, _startStation, _endStation, _affectedStations, _endTime),
         };
 
         var waterlooClient = Substitute.For<IWaterlooClient>();
@@ -470,7 +486,8 @@ public class DisruptionNotifierTests
                 _endStation,
                 Severity.Severe,
                 "+447123456789",
-                _endTime)
+                _endTime, 
+                _affectedStations)
         };
 
         var notifiedRepository = Substitute.For<IUserNotifiedRepository>();
@@ -486,7 +503,7 @@ public class DisruptionNotifierTests
 
         var affectedUsers = new List<AffectedUser>
         {
-            new(users.First().Id, _startStation, _endStation, _endTime),
+            new(users.First().Id, _startStation, _endStation, _affectedStations, _endTime),
         };
 
         var waterlooClient = Substitute.For<IWaterlooClient>();
@@ -535,6 +552,7 @@ public class DisruptionNotifierTests
         notification!.StartStationId.Should().Be(_startStation.Id);
         notification!.EndStationId.Should().Be(_endStation.Id);
         notification!.NotificationSentBy.Should().Be(NotificationSentBy.Failed);
+        notification!.AffectedStationIds.Should().BeEquivalentTo(_affectedStations.Select(x => x.Id).ToList());
     }
 
     [Fact]
@@ -551,7 +569,8 @@ public class DisruptionNotifierTests
                 _endStation,
                 Severity.Severe,
                 "+447123456789",
-                _endTime)
+                _endTime,
+                _affectedStations)
         };
 
         var notifiedRepository = Substitute.For<IUserNotifiedRepository>();
@@ -631,7 +650,7 @@ public class DisruptionNotifierTests
 
         var affectedUsers = new List<AffectedUser>
         {
-            new(Guid.NewGuid(), _startStation, _endStation, thirtyMinutesAgo),
+            new(Guid.NewGuid(), _startStation, _endStation, _affectedStations, thirtyMinutesAgo),
         };
 
         var waterlooClient = Substitute.For<IWaterlooClient>();

@@ -18,4 +18,5 @@ public record Notification(
     Guid SeverityId,
     Guid DescriptionId,
     NotificationSentBy NotificationSentBy,
-    DateTime SentTime);
+    DateTime SentTime,
+    IList<Guid> AffectedStationIds);
