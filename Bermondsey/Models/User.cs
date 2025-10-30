@@ -8,5 +8,6 @@ public record User(
     Station EndStation,
     Severity Severity,
     string PhoneNumber,
+    PhoneOS PhoneOS,
     TimeOnly EndTime,
     IEnumerable<Station> AffectedStations);

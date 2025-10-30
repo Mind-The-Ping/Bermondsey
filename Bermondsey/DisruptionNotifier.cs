@@ -83,14 +83,16 @@ public class DisruptionNotifier
         }
 
         var phoneLookup = userDetails.Value?
-          .ToDictionary(u => u.Id, u => u.PhoneNumber)
-          ?? new Dictionary<Guid, string>();
+          .ToDictionary(
+              u => u.Id, 
+              u => new { u.PhoneNumber, u.PhoneOS })
+          ?? [];
 
         var errors = new List<string>();
 
         foreach (var newUser in newUsers)
         {
-            if (!phoneLookup.TryGetValue(newUser.Id, out var phoneNumber))
+            if (!phoneLookup.TryGetValue(newUser.Id, out var phoneDetails))
             {
                 errors.Add($"Failed to find phone number for {newUser.Id}");
                 continue;
@@ -103,7 +105,8 @@ public class DisruptionNotifier
                 newUser.StartStation,
                 newUser.EndStation,
                 disruption.Severity,
-                phoneNumber,
+                phoneDetails.PhoneNumber,
+                phoneDetails.PhoneOS,
                 newUser.EndTime,
                 newUser.AffectedStations);
 

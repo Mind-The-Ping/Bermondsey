@@ -192,6 +192,7 @@ public class DisruptionNotifierTests
                 _endStation,
                 severity,
                 "+447123456789",
+                PhoneOS.Android,
                 _endTime,
                 _affectedStations),
             new User(
@@ -201,7 +202,8 @@ public class DisruptionNotifierTests
                 _startStation,
                 _endStation,
                 severity,
-                 "+447234567890",
+                "+447234567890",
+                PhoneOS.IOS,
                 _endTime,
                 _affectedStations),
         };
@@ -312,6 +314,7 @@ public class DisruptionNotifierTests
                 _endStation,
                 Severity.Severe,
                 "+447123456789",
+                PhoneOS.Android,
                 _endTime,
                 _affectedStations),
             new User(
@@ -322,6 +325,7 @@ public class DisruptionNotifierTests
                 _endStation,
                 Severity.Severe,
                  "+447234567890",
+                 PhoneOS.IOS,
                 _endTime,
                 _affectedStations),
         };
@@ -402,6 +406,7 @@ public class DisruptionNotifierTests
                 _endStation,
                 Severity.Severe,
                 "+447123456789",
+                PhoneOS.Android,
                 _endTime,
                 _affectedStations)
         };
@@ -486,6 +491,7 @@ public class DisruptionNotifierTests
                 _endStation,
                 Severity.Severe,
                 "+447123456789",
+                PhoneOS.Android,
                 _endTime, 
                 _affectedStations)
         };
@@ -569,6 +575,7 @@ public class DisruptionNotifierTests
                 _endStation,
                 Severity.Severe,
                 "+447123456789",
+                PhoneOS.Android,
                 _endTime,
                 _affectedStations)
         };

@@ -56,6 +56,7 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
             endStation, 
             Severity.Minor, 
             "+441234567890",
+            PhoneOS.Android,
             TimeOnly.FromDateTime(DateTime.UtcNow.AddMinutes(30)),
             affectedStations);
 
@@ -80,6 +81,7 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
         userRecord.EndStation.Should().Be(user.EndStation);
         userRecord.Severity.Should().Be(user.Severity);
         userRecord.PhoneNumber.Should().Be(user.PhoneNumber);
+        userRecord.PhoneOS.Should().Be(user.PhoneOS);
         userRecord.EndTime.Should().Be(user.EndTime);
         userRecord.AffectedStations.Should().BeEquivalentTo(user.AffectedStations);
     }
@@ -113,8 +115,9 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
             endStation,
             Severity.Minor, 
             "+441234567890",
-             TimeOnly.FromDateTime(DateTime.UtcNow.AddMinutes(30)),
-             affectedStations);
+            PhoneOS.Android,
+            TimeOnly.FromDateTime(DateTime.UtcNow.AddMinutes(30)),
+            affectedStations);
 
 
         var user2 = new User(
@@ -125,8 +128,9 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
             endStation,
             Severity.Severe, 
             "+441244562891",
-             TimeOnly.FromDateTime(DateTime.UtcNow.AddMinutes(45)),
-             affectedStations);
+            PhoneOS.IOS,
+            TimeOnly.FromDateTime(DateTime.UtcNow.AddMinutes(45)),
+            affectedStations);
 
         var users = new List<User>
         {
@@ -169,7 +173,8 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
             startStation,
             endStation,
             Severity.Minor, 
-            "+441234567890", 
+            "+441234567890",
+            PhoneOS.Android,
             new TimeOnly(5, 15),
             affectedStations);
 
@@ -180,7 +185,8 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
             startStation,
             endStation,
             Severity.Severe, 
-            "+441244562891", 
+            "+441244562891",
+            PhoneOS.IOS,
             new TimeOnly(5, 15),
             affectedStations);
 
@@ -225,9 +231,10 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
             startStation,
             endStation,
             Severity.Minor, 
-            "+441234567890", 
-             TimeOnly.FromDateTime(DateTime.UtcNow.AddSeconds(1)), 
-             affectedStations);
+            "+441234567890",
+            PhoneOS.Android,
+            TimeOnly.FromDateTime(DateTime.UtcNow.AddSeconds(1)), 
+            affectedStations);
 
         var users = new List<User>
         {
@@ -286,6 +293,7 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
             endStation,
             Severity.Minor, 
             "+441234567890",
+            PhoneOS.Android,
             TimeOnly.FromDateTime(DateTime.UtcNow.AddMinutes(10)), 
             affectedStations);
 
