@@ -3,21 +3,11 @@ using Bermondsey.Options;
 using CSharpFunctionalExtensions;
 using Microsoft.Extensions.Options;
 
-namespace Bermondsey.Clients;
-
-public interface ISmsClient
-{
-    Task<Result> SendAsync(
-        string to,
-        string message,
-        SmsSendOptions? options = null,
-        CancellationToken cancellationToken = default);
-}
-
+namespace Bermondsey.Clients.SmsClient;
 
 public class RealSmsClient : ISmsClient
 {
-    private readonly SmsClient _inner;
+    private readonly Azure.Communication.Sms.SmsClient _inner;
     private readonly SmsOptions _options;
 
     public RealSmsClient(IOptions<SmsOptions> options)
@@ -25,7 +15,7 @@ public class RealSmsClient : ISmsClient
         _options = options.Value ?? 
             throw new ArgumentNullException(nameof(options));
 
-        _inner = new SmsClient(_options.ConnectionString);
+        _inner = new Azure.Communication.Sms.SmsClient(_options.ConnectionString);
     }
 
     public async Task<Result> SendAsync(string to, string message, SmsSendOptions? options = null, CancellationToken cancellationToken = default)

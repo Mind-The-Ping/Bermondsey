@@ -1,6 +1,6 @@
 ﻿using Azure.Communication.Sms;
 using Azure.Messaging.ServiceBus;
-using Bermondsey.Clients;
+using Bermondsey.Clients.SmsClient;
 using Bermondsey.Clients.Stratford;
 using Bermondsey.Clients.Waterloo;
 using Bermondsey.Messages;
