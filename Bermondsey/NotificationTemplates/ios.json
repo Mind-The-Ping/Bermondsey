@@ -1,0 +1,12 @@
+{
+  "aps": {
+    "alert": {
+      "title": "{title}",
+      "body": "{body}"
+    },
+    "sound": "default"
+  },
+  "data": {
+    "id": "{id}"
+  }
+}

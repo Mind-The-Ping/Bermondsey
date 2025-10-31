@@ -1,12 +1,14 @@
-﻿using Bermondsey.Models;
+﻿using Bermondsey.MessageTemplate;
+using Bermondsey.Models;
 using CSharpFunctionalExtensions;
 
 namespace Bermondsey.Clients.NotificationClient;
 public interface INotifcationClient
 {
     public Task<Result> SendAsync(
-        Guid userId, 
-        PhoneOS phoneOS, 
-        string message, 
+        Guid userId,
+        PhoneOS phoneOS,
+        Guid notificationId,
+        FormattedMessage message, 
         CancellationToken cancellationToken = default);
 }
