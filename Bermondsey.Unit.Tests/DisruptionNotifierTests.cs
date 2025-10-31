@@ -1,9 +1,9 @@
-﻿using Azure.Communication.Sms;
-using Azure.Messaging.ServiceBus;
+﻿using Azure.Messaging.ServiceBus;
 using Bermondsey.Clients.SmsClient;
 using Bermondsey.Clients.Stratford;
 using Bermondsey.Clients.Waterloo;
 using Bermondsey.Messages;
+using Bermondsey.MessageTemplate;
 using Bermondsey.Models;
 using Bermondsey.Options;
 using Bermondsey.Repositories;
@@ -30,7 +30,7 @@ public class DisruptionNotifierTests
     public DisruptionNotifierTests()
     {
         _smsClient = Substitute.For<ISmsClient>();
-        _smsClient.SendAsync(Arg.Any<string>(), Arg.Any<string>())
+        _smsClient.SendAsync(Arg.Any<string>(), Arg.Any<FormattedMessage>())
             .Returns(Result.Success());
 
         var serviceBusOptions = new ServiceBusOptions()
@@ -50,14 +50,29 @@ public class DisruptionNotifierTests
            .CreateSender(serviceBusOptions.Queues.Notifications)
            .Returns(_notificationSender);
 
-        var templateOptions = new MessageTemplatesOptions()
+        var templateOptions = Microsoft.Extensions.Options.Options.Create(new MessageTemplatesOptions
         {
-            Disruption = "Your journey on the {line} line from {origin} to {destination} has a {severity} issue.",
-            Resolved = "Your issue on the {line} from {origin} to {destination} is now resolved."
-        };
+            Delay = new TemplateSection()
+            {
+                Title = "Your journey from {origin} to {destination} has a {severity} issue.",
+                Body = "Your journey on the {line} line from {origin} to {destination} has {severity} delays." +
+                " The following stations are affected: {stations}."
+            },
+            Disruption = new TemplateSection()
+            {
+                Title = "Your journey from {origin} to {destination} is {severity}.",
+                Body = "Your journey on the {line} line from {origin} to {destination} is {severity}." +
+                " The following stations are affected: {stations}."
+            },
+            Resolved = new TemplateSection()
+            {
+                Title = "Your issue from {origin} to {destination} is now resolved.",
+                Body = "Your issue on the {line} line from {origin} to {destination} is now resolved. Services are back to normal."
+            }
+        });
 
         var iMessageTemplatesOptions = Microsoft.Extensions.Options.Options.Create(templateOptions);
-        _messagerFormatter = new MessageFormatter(iMessageTemplatesOptions);
+        _messagerFormatter = new MessageFormatter(iMessageTemplatesOptions.Value);
 
         _line = new Line(Guid.Parse("8c3a4d59-f2e0-46a8-9f56-ec27eaffded9"), "District");
         _startStation = new Station(Guid.Parse("73bce1de-143f-4903-928a-c34ceb3db42e"), "Mile End");
@@ -532,7 +547,7 @@ public class DisruptionNotifierTests
             .Returns(Result.Success<IEnumerable<UserDetails>>(userDetails));
 
         var smsClient = Substitute.For<ISmsClient>();
-        smsClient.SendAsync(Arg.Any<string>(), Arg.Any<string>())
+        smsClient.SendAsync(Arg.Any<string>(), Arg.Any<FormattedMessage>())
             .Returns(Result.Failure("It failed dude."));
 
         var disruptionNotifer = new DisruptionNotifier(

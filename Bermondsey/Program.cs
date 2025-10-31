@@ -4,6 +4,7 @@ using Bermondsey.Clients.NotificationClient;
 using Bermondsey.Clients.SmsClient;
 using Bermondsey.Clients.Stratford;
 using Bermondsey.Clients.Waterloo;
+using Bermondsey.MessageTemplate;
 using Bermondsey.Options;
 using Bermondsey.Repositories;
 using Microsoft.Azure.Functions.Worker;

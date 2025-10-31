@@ -3,6 +3,7 @@ using Bermondsey.Clients.SmsClient;
 using Bermondsey.Clients.Stratford;
 using Bermondsey.Clients.Waterloo;
 using Bermondsey.Messages;
+using Bermondsey.MessageTemplate;
 using Bermondsey.Models;
 using Bermondsey.Options;
 using Bermondsey.Repositories;
@@ -130,7 +131,8 @@ public class DisruptionNotifier
                 user.Line.Name,
                 user.StartStation.Name,
                 user.EndStation.Name,
-                user.Severity);
+                user.Severity,
+                user.AffectedStations);
 
             var messageResult = await _smsClient.SendAsync(user.PhoneNumber, message);
 

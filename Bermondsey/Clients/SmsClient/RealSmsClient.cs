@@ -1,7 +1,9 @@
 ﻿using Azure.Communication.Sms;
+using Bermondsey.MessageTemplate;
 using Bermondsey.Options;
 using CSharpFunctionalExtensions;
 using Microsoft.Extensions.Options;
+using System.Text;
 
 namespace Bermondsey.Clients.SmsClient;
 
@@ -18,11 +20,20 @@ public class RealSmsClient : ISmsClient
         _inner = new Azure.Communication.Sms.SmsClient(_options.ConnectionString);
     }
 
-    public async Task<Result> SendAsync(string to, string message, SmsSendOptions? options = null, CancellationToken cancellationToken = default)
+    public async Task<Result> SendAsync(
+        string to, 
+        FormattedMessage message, 
+        SmsSendOptions? options = null, 
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            var response = await _inner.SendAsync(_options.PhoneNumber, to, message, options, cancellationToken);
+            var response = await _inner.SendAsync(
+                _options.PhoneNumber, 
+                to, 
+                FormatSmsText(message), 
+                options, 
+                cancellationToken);
 
             if(response.Value.Successful) {
                 return Result.Success();
@@ -34,5 +45,15 @@ public class RealSmsClient : ISmsClient
         catch(Exception ex) {
             return Result.Failure($"Exception sending SMS to {to}: {ex.Message}");
         }
+    }
+
+    private static string FormatSmsText(FormattedMessage message)
+    {
+        var sb = new StringBuilder();
+
+        sb.AppendLine($"{message.Title.Trim()}");
+        sb.AppendLine();
+        sb.AppendLine(message.Body.Trim());
+        return sb.ToString();
     }
 }
