@@ -1,12 +1,16 @@
 using Azure.Messaging.ServiceBus;
 using Bermondsey;
-using Bermondsey.Clients;
+using Bermondsey.Clients.NotificationClient;
+using Bermondsey.Clients.SmsClient;
 using Bermondsey.Clients.Stratford;
 using Bermondsey.Clients.Waterloo;
+using Bermondsey.MessageTemplate;
+using Bermondsey.NotificationOrchestrator;
 using Bermondsey.Options;
 using Bermondsey.Repositories;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Builder;
+using Microsoft.Azure.NotificationHubs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -50,13 +54,23 @@ builder.Services.AddSingleton(sp =>
     return ConnectionMultiplexer.Connect(configOptions);
 });
 
+builder.Services.AddSingleton(sp =>
+{
+    var connectionString = builder.Configuration["NotificationHub:ConnectionString"];
+    var hubname = builder.Configuration["NotificationHub:HubName"];
+
+    return new NotificationHubClient(connectionString, hubname);
+});
+
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<TokenProvider>();
 builder.Services.AddScoped<MessageFormatter>();
 builder.Services.AddScoped<ISmsClient, RealSmsClient>();
+builder.Services.AddScoped<INotifcationClient, NotificationClient>();
 builder.Services.AddScoped<IWaterlooClient, WaterlooClient>();
 builder.Services.AddScoped<IStratfordClient, StratfordClient>();
 builder.Services.AddScoped<IUserNotifiedRepository, UserNotifiedRepository>();
+builder.Services.AddScoped<INotificationOrchestrator, NotificationOrchestrator>();
 builder.Services.AddScoped<DisruptionNotifier>();
 
 builder.ConfigureFunctionsWebApplication();

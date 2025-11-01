@@ -1,25 +1,22 @@
-﻿using Azure.Communication.Sms;
-using Azure.Messaging.ServiceBus;
-using Bermondsey.Clients;
-using Bermondsey.Clients.Stratford;
+﻿using Bermondsey.Clients.Stratford;
 using Bermondsey.Clients.Waterloo;
 using Bermondsey.Messages;
 using Bermondsey.Models;
-using Bermondsey.Options;
+using Bermondsey.NotificationOrchestrator;
 using Bermondsey.Repositories;
 using CSharpFunctionalExtensions;
 using FluentAssertions;
-using Microsoft.Extensions.Options;
 using NSubstitute;
 
 namespace Bermondsey.Unit.Tests;
 public class DisruptionNotifierTests
 {
-    private readonly ISmsClient _smsClient;
-    private readonly ServiceBusClient _serviceBusClient;
-    private readonly MessageFormatter _messagerFormatter;
-    private readonly ServiceBusSender _notificationSender;
-    private readonly IOptions<ServiceBusOptions> _iServiceBusOptions;
+    private readonly DisruptionNotifier _notifier;
+
+    private readonly IWaterlooClient _waterlooClient;
+    private readonly IStratfordClient _stratfordClient;
+    private readonly IUserNotifiedRepository _userNotifiedRepository;
+    private readonly INotificationOrchestrator _notificationOrchestrator;
 
     private readonly Line _line;
     private readonly Station _startStation;
@@ -29,36 +26,6 @@ public class DisruptionNotifierTests
 
     public DisruptionNotifierTests()
     {
-        _smsClient = Substitute.For<ISmsClient>();
-        _smsClient.SendAsync(Arg.Any<string>(), Arg.Any<string>())
-            .Returns(Result.Success());
-
-        var serviceBusOptions = new ServiceBusOptions()
-        {
-            Queues = new QueueOptions()
-            {
-                Notifications = "queue.4",
-            }
-        };
-
-        _iServiceBusOptions = Microsoft.Extensions.Options.Options.Create(serviceBusOptions);
-
-        _serviceBusClient = Substitute.For<ServiceBusClient>();
-        _notificationSender = Substitute.For<ServiceBusSender>();
-
-        _serviceBusClient
-           .CreateSender(serviceBusOptions.Queues.Notifications)
-           .Returns(_notificationSender);
-
-        var templateOptions = new MessageTemplatesOptions()
-        {
-            Disruption = "Your journey on the {line} line from {origin} to {destination} has a {severity} issue.",
-            Resolved = "Your issue on the {line} from {origin} to {destination} is now resolved."
-        };
-
-        var iMessageTemplatesOptions = Microsoft.Extensions.Options.Options.Create(templateOptions);
-        _messagerFormatter = new MessageFormatter(iMessageTemplatesOptions);
-
         _line = new Line(Guid.Parse("8c3a4d59-f2e0-46a8-9f56-ec27eaffded9"), "District");
         _startStation = new Station(Guid.Parse("73bce1de-143f-4903-928a-c34ceb3db42e"), "Mile End");
         _endStation = new Station(Guid.Parse("968bc258-138c-45cf-83c0-599705285d25"), "West Ham");
@@ -69,21 +36,29 @@ public class DisruptionNotifierTests
             new Station(Guid.Parse("a391396c-6921-4202-ace2-2d5033bfac1f"), "Bromley By Bow"),
             new Station(Guid.Parse("968bc258-138c-45cf-83c0-599705285d25"), "West Ham"),
             ];
-    }
 
+        _waterlooClient =  Substitute.For<IWaterlooClient>();
+        _stratfordClient = Substitute.For<IStratfordClient>();
+        _userNotifiedRepository =  Substitute.For<IUserNotifiedRepository>();
+        _notificationOrchestrator = Substitute.For<INotificationOrchestrator>();
+
+        _notifier = new DisruptionNotifier(
+            _waterlooClient,
+            _stratfordClient,
+            _userNotifiedRepository,
+            _notificationOrchestrator);
+    }
 
     [Fact]
     public async Task DisruptionNotifier_NotifyDisruptionAsync_New_Users_Disruption_Notifys_New_Users_Only()
     {
-        var notifiedRepository = Substitute.For<IUserNotifiedRepository>();
+        _userNotifiedRepository.GetUsersByDisruptionIdAsync(Arg.Any<Guid>())
+          .Returns(Enumerable.Empty<User>());
 
-        notifiedRepository.GetUsersByDisruptionIdAsync(Arg.Any<Guid>())
-            .Returns(Enumerable.Empty<User>());
-
-        notifiedRepository.SaveUsersAsync(Arg.Any<IEnumerable<User>>())
+        _userNotifiedRepository.SaveUsersAsync(Arg.Any<IEnumerable<User>>())
             .Returns(Result.Success());
 
-        notifiedRepository.DeleteByDisruptionIdAsync(Arg.Any<Guid>())
+        _userNotifiedRepository.DeleteByDisruptionIdAsync(Arg.Any<Guid>())
             .Returns(Task.CompletedTask);
 
         var affectedUsers = new List<AffectedUser>
@@ -92,8 +67,7 @@ public class DisruptionNotifierTests
             new(Guid.NewGuid(), _startStation, _endStation, _affectedStations, _endTime)
         };
 
-        var waterlooClient = Substitute.For<IWaterlooClient>();
-        waterlooClient.GetAffectedUsersAsync(
+        _waterlooClient.GetAffectedUsersAsync(
             Arg.Any<Guid>(),
             Arg.Any<Guid>(),
             Arg.Any<Guid>(),
@@ -108,64 +82,51 @@ public class DisruptionNotifierTests
             new(affectedUsers.Last().Id, "+447234567890", PhoneOS.IOS)
         };
 
-        var stratfordClient = Substitute.For<IStratfordClient>();
-        stratfordClient.GetUserDetailsAsync(Arg.Any<IEnumerable<Guid>>())
+        _stratfordClient.GetUserDetailsAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(Result.Success<IEnumerable<UserDetails>>(userDetails));
 
-        var disruptionNotifer = new DisruptionNotifier(
-            _smsClient,
-            _serviceBusClient,
-            waterlooClient,
-            stratfordClient,
-            _messagerFormatter,
-            _iServiceBusOptions,
-            notifiedRepository);
-
         var disruption = new Disruption(
-            Guid.NewGuid(),
-            _line,
-            _startStation.Id,
-            _endStation.Id,
-            Severity.Suspended,
-            Guid.NewGuid(),
-            Guid.NewGuid());
+           Guid.NewGuid(),
+           _line,
+           _startStation.Id,
+           _endStation.Id,
+           Severity.Suspended,
+           Guid.NewGuid(),
+           Guid.NewGuid());
 
-        await disruptionNotifer.NotifyDisruptionAsync(disruption);
+        IEnumerable<User> capturedUsers = null!;
 
-        var notificationsSents = _notificationSender.ReceivedCalls();
-        notificationsSents.Should().HaveCount(2);
+        _notificationOrchestrator
+            .SendDisruptionNotificationAsync(disruption, Arg.Do<IEnumerable<User>>(u => capturedUsers = u))
+            .Returns(Task.CompletedTask);
 
-        var message1 = (ServiceBusMessage)notificationsSents.First().GetArguments()[0]!;
-        var notification1 = message1.Body.ToObjectFromJson<Notification>();
+        await _notifier.NotifyDisruptionAsync(disruption);
 
-        notification1!.UserId.Should().Be(affectedUsers.First().Id);
-        notification1!.DisruptionId.Should().Be(disruption.Id);
-        notification1!.LineId.Should().Be(_line.Id);
-        notification1!.StartStationId.Should().Be(_startStation.Id);
-        notification1!.EndStationId.Should().Be(_endStation.Id);
-        notification1!.NotificationSentBy.Should().Be(NotificationSentBy.Sms);
-        notification1!.AffectedStationIds.Should().BeEquivalentTo(_affectedStations.Select(x => x.Id).ToList());
+        capturedUsers.Count().Should().Be(2);
 
-        var message2 = (ServiceBusMessage)notificationsSents.Last().GetArguments()[0]!;
-        var notification2 = message2.Body.ToObjectFromJson<Notification>();
+        capturedUsers.First().Id.Should().Be(affectedUsers.First().Id);
+        capturedUsers.First().DisruptionId.Should().Be(disruption.Id);
+        capturedUsers.First().NotificationId.Should().Be(null);
+        capturedUsers.First().Line.Should().Be(disruption.Line);
+        capturedUsers.First().StartStation.Should().Be(affectedUsers.First().StartStation);
+        capturedUsers.First().EndStation.Should().Be(affectedUsers.First().EndStation);
+        capturedUsers.First().Severity.Should().Be(disruption.Severity);
+        capturedUsers.First().PhoneNumber.Should().Be(userDetails.First().PhoneNumber);
+        capturedUsers.First().PhoneOS.Should().Be(userDetails.First().PhoneOS);
+        capturedUsers.First().EndTime.Should().Be(affectedUsers.First().EndTime);
+        capturedUsers.First().AffectedStations.Should().BeEquivalentTo(affectedUsers.First().AffectedStations);
 
-        notification2!.UserId.Should().Be(affectedUsers.Last().Id);
-        notification2!.DisruptionId.Should().Be(disruption.Id);
-        notification2!.LineId.Should().Be(_line.Id);
-        notification2!.StartStationId.Should().Be(_startStation.Id);
-        notification2!.EndStationId.Should().Be(_endStation.Id);
-        notification2!.NotificationSentBy.Should().Be(NotificationSentBy.Sms);
-        notification2!.AffectedStationIds.Should().BeEquivalentTo(_affectedStations.Select(x => x.Id).ToList());
-
-        var notifyRepoCalled = notifiedRepository.ReceivedCalls();
-        notifyRepoCalled.Should().HaveCount(2);
-
-        var usersSaved = (IEnumerable<User>)notifyRepoCalled.Last().GetArguments()[0]!;
-
-        usersSaved.First().Id.Should().Be(affectedUsers.First().Id);
-        usersSaved.First().PhoneNumber.Should().Be(userDetails.First().PhoneNumber);
-        usersSaved.Last().Id.Should().Be(affectedUsers.Last().Id);
-        usersSaved.Last().PhoneNumber.Should().Be(userDetails.Last().PhoneNumber);
+        capturedUsers.Last().Id.Should().Be(affectedUsers.Last().Id);
+        capturedUsers.Last().DisruptionId.Should().Be(disruption.Id);
+        capturedUsers.Last().NotificationId.Should().Be(null);
+        capturedUsers.Last().Line.Should().Be(disruption.Line);
+        capturedUsers.Last().StartStation.Should().Be(affectedUsers.Last().StartStation);
+        capturedUsers.Last().EndStation.Should().Be(affectedUsers.Last().EndStation);
+        capturedUsers.Last().Severity.Should().Be(disruption.Severity);
+        capturedUsers.Last().PhoneNumber.Should().Be(userDetails.Last().PhoneNumber);
+        capturedUsers.Last().PhoneOS.Should().Be(userDetails.Last().PhoneOS);
+        capturedUsers.Last().EndTime.Should().Be(affectedUsers.Last().EndTime);
+        capturedUsers.Last().AffectedStations.Should().BeEquivalentTo(affectedUsers.Last().AffectedStations);
     }
 
     [Fact]
@@ -174,13 +135,13 @@ public class DisruptionNotifierTests
         var severity = Severity.Severe;
 
         var disruption = new Disruption(
-         Guid.NewGuid(),
-         _line,
-         _startStation.Id,
-         _endStation.Id,
-         severity,
-         Guid.NewGuid(),
-         Guid.NewGuid());
+            Guid.NewGuid(),
+            _line,
+            _startStation.Id,
+            _endStation.Id,
+            severity,
+            Guid.NewGuid(),
+            Guid.NewGuid());
 
         var users = new List<User>
         {
@@ -192,6 +153,7 @@ public class DisruptionNotifierTests
                 _endStation,
                 severity,
                 "+447123456789",
+                PhoneOS.Android,
                 _endTime,
                 _affectedStations),
             new User(
@@ -202,20 +164,19 @@ public class DisruptionNotifierTests
                 _endStation,
                 severity,
                  "+447234567890",
+                 PhoneOS.Android,
                 _endTime,
                 _affectedStations),
         };
 
-        var notifiedRepository = Substitute.For<IUserNotifiedRepository>();
-
-        notifiedRepository.GetUsersByDisruptionIdAsync(Arg.Any<Guid>())
+        _userNotifiedRepository.GetUsersByDisruptionIdAsync(Arg.Any<Guid>())
             .Returns(users);
 
-        notifiedRepository.SaveUsersAsync(Arg.Any<IEnumerable<User>>())
-            .Returns(Result.Success());
+        _userNotifiedRepository.SaveUsersAsync(Arg.Any<IEnumerable<User>>())
+           .Returns(Result.Success());
 
-        notifiedRepository.DeleteByDisruptionIdAsync(Arg.Any<Guid>())
-            .Returns(Task.CompletedTask);
+        _userNotifiedRepository.DeleteByDisruptionIdAsync(Arg.Any<Guid>())
+           .Returns(Task.CompletedTask);
 
         var affectedUsers = new List<AffectedUser>
         {
@@ -223,15 +184,14 @@ public class DisruptionNotifierTests
             new(Guid.NewGuid(), _startStation, _endStation, _affectedStations, _endTime)
         };
 
-        var waterlooClient = Substitute.For<IWaterlooClient>();
-        waterlooClient.GetAffectedUsersAsync(
-            Arg.Any<Guid>(),
-            Arg.Any<Guid>(),
-            Arg.Any<Guid>(),
-            Arg.Any<Severity>(),
-            Arg.Any<TimeOnly>(),
-            Arg.Any<DayOfWeek>())
-            .Returns(Result.Success<IEnumerable<AffectedUser>>(affectedUsers));
+        _waterlooClient.GetAffectedUsersAsync(
+             Arg.Any<Guid>(),
+             Arg.Any<Guid>(),
+             Arg.Any<Guid>(),
+             Arg.Any<Severity>(),
+             Arg.Any<TimeOnly>(),
+             Arg.Any<DayOfWeek>())
+             .Returns(Result.Success<IEnumerable<AffectedUser>>(affectedUsers));
 
         var userDetails = new List<UserDetails>
         {
@@ -239,55 +199,42 @@ public class DisruptionNotifierTests
             new(affectedUsers.Last().Id, "+447456789012", PhoneOS.IOS)
         };
 
-        var stratfordClient = Substitute.For<IStratfordClient>();
-        stratfordClient.GetUserDetailsAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(Result.Success<IEnumerable<UserDetails>>(userDetails));
+        _stratfordClient.GetUserDetailsAsync(Arg.Any<IEnumerable<Guid>>())
+           .Returns(Result.Success<IEnumerable<UserDetails>>(userDetails));
 
-        var disruptionNotifer = new DisruptionNotifier(
-           _smsClient,
-           _serviceBusClient,
-           waterlooClient,
-           stratfordClient,
-           _messagerFormatter,
-           _iServiceBusOptions,
-           notifiedRepository);
+        IEnumerable<User> capturedUsers = null!;
 
-        await disruptionNotifer.NotifyDisruptionAsync(disruption);
+        _notificationOrchestrator
+           .SendDisruptionNotificationAsync(disruption, Arg.Do<IEnumerable<User>>(u => capturedUsers = u))
+           .Returns(Task.CompletedTask);
 
-        var notificationsSents = _notificationSender.ReceivedCalls();
-        notificationsSents.Should().HaveCount(2);
+        await _notifier.NotifyDisruptionAsync(disruption);
 
-        var message1 = (ServiceBusMessage)notificationsSents.First().GetArguments()[0]!;
-        var notification1 = message1.Body.ToObjectFromJson<Notification>();
+        capturedUsers.Count().Should().Be(2);
 
-        notification1!.UserId.Should().Be(affectedUsers.First().Id);
-        notification1!.DisruptionId.Should().Be(disruption.Id);
-        notification1!.LineId.Should().Be(_line.Id);
-        notification1!.StartStationId.Should().Be(_startStation.Id);
-        notification1!.EndStationId.Should().Be(_endStation.Id);
-        notification1!.NotificationSentBy.Should().Be(NotificationSentBy.Sms);
-        notification1!.AffectedStationIds.Should().BeEquivalentTo(_affectedStations.Select(x => x.Id).ToList());
+        capturedUsers.First().Id.Should().Be(affectedUsers.First().Id);
+        capturedUsers.First().DisruptionId.Should().Be(disruption.Id);
+        capturedUsers.First().NotificationId.Should().Be(null);
+        capturedUsers.First().Line.Should().Be(disruption.Line);
+        capturedUsers.First().StartStation.Should().Be(affectedUsers.First().StartStation);
+        capturedUsers.First().EndStation.Should().Be(affectedUsers.First().EndStation);
+        capturedUsers.First().Severity.Should().Be(disruption.Severity);
+        capturedUsers.First().PhoneNumber.Should().Be(userDetails.First().PhoneNumber);
+        capturedUsers.First().PhoneOS.Should().Be(userDetails.First().PhoneOS);
+        capturedUsers.First().EndTime.Should().Be(affectedUsers.First().EndTime);
+        capturedUsers.First().AffectedStations.Should().BeEquivalentTo(affectedUsers.First().AffectedStations);
 
-        var message2 = (ServiceBusMessage)notificationsSents.Last().GetArguments()[0]!;
-        var notification2 = message2.Body.ToObjectFromJson<Notification>();
-
-        notification2!.UserId.Should().Be(affectedUsers.Last().Id);
-        notification2!.DisruptionId.Should().Be(disruption.Id);
-        notification2!.LineId.Should().Be(_line.Id);
-        notification2!.StartStationId.Should().Be(_startStation.Id);
-        notification2!.EndStationId.Should().Be(_endStation.Id);
-        notification2!.NotificationSentBy.Should().Be(NotificationSentBy.Sms);
-        notification2!.AffectedStationIds.Should().BeEquivalentTo(_affectedStations.Select(x => x.Id).ToList());
-
-        var notifyRepoCalled = notifiedRepository.ReceivedCalls();
-        notifyRepoCalled.Should().HaveCount(2);
-
-        var usersSaved = (IEnumerable<User>)notifyRepoCalled.Last().GetArguments()[0]!;
-
-        usersSaved.First().Id.Should().Be(affectedUsers.First().Id);
-        usersSaved.First().PhoneNumber.Should().Be(userDetails.First().PhoneNumber);
-        usersSaved.Last().Id.Should().Be(affectedUsers.Last().Id);
-        usersSaved.Last().PhoneNumber.Should().Be(userDetails.Last().PhoneNumber);
+        capturedUsers.Last().Id.Should().Be(affectedUsers.Last().Id);
+        capturedUsers.Last().DisruptionId.Should().Be(disruption.Id);
+        capturedUsers.Last().NotificationId.Should().Be(null);
+        capturedUsers.Last().Line.Should().Be(disruption.Line);
+        capturedUsers.Last().StartStation.Should().Be(affectedUsers.Last().StartStation);
+        capturedUsers.Last().EndStation.Should().Be(affectedUsers.Last().EndStation);
+        capturedUsers.Last().Severity.Should().Be(disruption.Severity);
+        capturedUsers.Last().PhoneNumber.Should().Be(userDetails.Last().PhoneNumber);
+        capturedUsers.Last().PhoneOS.Should().Be(userDetails.Last().PhoneOS);
+        capturedUsers.Last().EndTime.Should().Be(affectedUsers.Last().EndTime);
+        capturedUsers.Last().AffectedStations.Should().BeEquivalentTo(affectedUsers.Last().AffectedStations);
     }
 
     [Fact]
@@ -310,8 +257,9 @@ public class DisruptionNotifierTests
                 _line,
                 _startStation,
                 _endStation,
-                Severity.Severe,
+                 Severity.Severe,
                 "+447123456789",
+                PhoneOS.Android,
                 _endTime,
                 _affectedStations),
             new User(
@@ -320,22 +268,21 @@ public class DisruptionNotifierTests
                 _line,
                 _startStation,
                 _endStation,
-                Severity.Severe,
+                 Severity.Severe,
                  "+447234567890",
+                 PhoneOS.Android,
                 _endTime,
                 _affectedStations),
         };
 
-        var notifiedRepository = Substitute.For<IUserNotifiedRepository>();
+        _userNotifiedRepository.GetUsersByDisruptionIdAsync(Arg.Any<Guid>())
+           .Returns(users);
 
-        notifiedRepository.GetUsersByDisruptionIdAsync(Arg.Any<Guid>())
-            .Returns(users);
+        _userNotifiedRepository.SaveUsersAsync(Arg.Any<IEnumerable<User>>())
+          .Returns(Result.Success());
 
-        notifiedRepository.SaveUsersAsync(Arg.Any<IEnumerable<User>>())
-            .Returns(Result.Success());
-
-        notifiedRepository.DeleteByDisruptionIdAsync(Arg.Any<Guid>())
-            .Returns(Task.CompletedTask);
+        _userNotifiedRepository.DeleteByDisruptionIdAsync(Arg.Any<Guid>())
+           .Returns(Task.CompletedTask);
 
         var affectedUsers = new List<AffectedUser>
         {
@@ -343,8 +290,7 @@ public class DisruptionNotifierTests
             new(Guid.NewGuid(), _startStation, _endStation, _affectedStations, _endTime)
         };
 
-        var waterlooClient = Substitute.For<IWaterlooClient>();
-        waterlooClient.GetAffectedUsersAsync(
+        _waterlooClient.GetAffectedUsersAsync(
             Arg.Any<Guid>(),
             Arg.Any<Guid>(),
             Arg.Any<Guid>(),
@@ -359,38 +305,33 @@ public class DisruptionNotifierTests
             new(affectedUsers.Last().Id, "+447456789012", PhoneOS.IOS)
         };
 
-        var stratfordClient = Substitute.For<IStratfordClient>();
-        stratfordClient.GetUserDetailsAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(Result.Success<IEnumerable<UserDetails>>(userDetails));
+        _stratfordClient.GetUserDetailsAsync(Arg.Any<IEnumerable<Guid>>())
+          .Returns(Result.Success<IEnumerable<UserDetails>>(userDetails));
 
-        var disruptionNotifer = new DisruptionNotifier(
-         _smsClient,
-         _serviceBusClient,
-         waterlooClient,
-         stratfordClient,
-         _messagerFormatter,
-         _iServiceBusOptions,
-         notifiedRepository);
+        IEnumerable<User> capturedUsers = null!;
 
-        await disruptionNotifer.NotifyDisruptionAsync(disruption);
+        _notificationOrchestrator
+           .SendDisruptionNotificationAsync(disruption, Arg.Do<IEnumerable<User>>(u => capturedUsers = u))
+           .Returns(Task.CompletedTask);
 
-        var notificationsSent = _notificationSender.ReceivedCalls();
-        notificationsSent.Should().HaveCount(4);
+        await _notifier.NotifyDisruptionAsync(disruption);
+
+        capturedUsers.Count().Should().Be(4);
     }
 
     [Fact]
     public async Task DisruptionNotifier_NotifyDisruptionAsync_NewUser_NotifiedUser_Different_Severity_Disruption_Notify_Sends_New()
     {
         var severityId = Guid.NewGuid();
-
         var disruption = new Disruption(
-           Guid.NewGuid(),
-           _line,
-           _startStation.Id,
-           _endStation.Id,
-           Severity.Minor,
-           severityId,
-           Guid.NewGuid());
+            Guid.NewGuid(),
+            _line,
+            _startStation.Id,
+            _endStation.Id,
+            Severity.Minor,
+            severityId,
+            Guid.NewGuid());
+
 
         var users = new List<User>
         {
@@ -402,28 +343,26 @@ public class DisruptionNotifierTests
                 _endStation,
                 Severity.Severe,
                 "+447123456789",
+                PhoneOS.Android,
                 _endTime,
                 _affectedStations)
         };
 
-        var notifiedRepository = Substitute.For<IUserNotifiedRepository>();
+        _userNotifiedRepository.GetUsersByDisruptionIdAsync(Arg.Any<Guid>())
+          .Returns(users);
 
-        notifiedRepository.GetUsersByDisruptionIdAsync(Arg.Any<Guid>())
-            .Returns(users);
+        _userNotifiedRepository.SaveUsersAsync(Arg.Any<IEnumerable<User>>())
+         .Returns(Result.Success());
 
-        notifiedRepository.SaveUsersAsync(Arg.Any<IEnumerable<User>>())
-            .Returns(Result.Success());
-
-        notifiedRepository.DeleteByDisruptionIdAsync(Arg.Any<Guid>())
-            .Returns(Task.CompletedTask);
+        _userNotifiedRepository.DeleteByDisruptionIdAsync(Arg.Any<Guid>())
+           .Returns(Task.CompletedTask);
 
         var affectedUsers = new List<AffectedUser>
         {
             new(users.First().Id, _startStation, _endStation, _affectedStations, _endTime),
         };
 
-        var waterlooClient = Substitute.For<IWaterlooClient>();
-        waterlooClient.GetAffectedUsersAsync(
+        _waterlooClient.GetAffectedUsersAsync(
             Arg.Any<Guid>(),
             Arg.Any<Guid>(),
             Arg.Any<Guid>(),
@@ -437,256 +376,18 @@ public class DisruptionNotifierTests
             new(affectedUsers.First().Id, "+447345678901", PhoneOS.Android),
         };
 
-        var stratfordClient = Substitute.For<IStratfordClient>();
-        stratfordClient.GetUserDetailsAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(Result.Success<IEnumerable<UserDetails>>(userDetails));
+        _stratfordClient.GetUserDetailsAsync(Arg.Any<IEnumerable<Guid>>())
+          .Returns(Result.Success<IEnumerable<UserDetails>>(userDetails));
 
-        var disruptionNotifer = new DisruptionNotifier(
-         _smsClient,
-         _serviceBusClient,
-         waterlooClient,
-         stratfordClient,
-         _messagerFormatter,
-         _iServiceBusOptions,
-         notifiedRepository);
+        IEnumerable<User> capturedUsers = null!;
 
-        await disruptionNotifer.NotifyDisruptionAsync(disruption);
+        _notificationOrchestrator
+           .SendDisruptionNotificationAsync(disruption, Arg.Do<IEnumerable<User>>(u => capturedUsers = u))
+           .Returns(Task.CompletedTask);
 
-        var notificationsSent = _notificationSender.ReceivedCalls();
-        notificationsSent.Should().HaveCount(1);
+        await _notifier.NotifyDisruptionAsync(disruption);
 
-        var smsSent = _smsClient.ReceivedCalls();
-        smsSent.Should().HaveCount(1);
-
-        var sentPhoneNumber = (string)smsSent.First().GetArguments()[0]!;
-        sentPhoneNumber.Should().Be(userDetails.First().PhoneNumber);
-    }
-
-    [Fact]
-    public async Task DisruptionNotifier_NotifyDisruptionAsync_NewUser_NotifiedUser_Fails_Sends_Message_Saves()
-    {
-        var severityId = Guid.NewGuid();
-
-        var disruption = new Disruption(
-           Guid.NewGuid(),
-           _line,
-           _startStation.Id,
-           _endStation.Id,
-           Severity.Minor,
-           severityId,
-           Guid.NewGuid());
-
-        var users = new List<User>
-        {
-            new User(
-                Guid.NewGuid(),
-                disruption.Id,
-                _line,
-                _startStation,
-                _endStation,
-                Severity.Severe,
-                "+447123456789",
-                _endTime, 
-                _affectedStations)
-        };
-
-        var notifiedRepository = Substitute.For<IUserNotifiedRepository>();
-
-        notifiedRepository.GetUsersByDisruptionIdAsync(Arg.Any<Guid>())
-            .Returns(users);
-
-        notifiedRepository.SaveUsersAsync(Arg.Any<IEnumerable<User>>())
-            .Returns(Result.Success());
-
-        notifiedRepository.DeleteByDisruptionIdAsync(Arg.Any<Guid>())
-            .Returns(Task.CompletedTask);
-
-        var affectedUsers = new List<AffectedUser>
-        {
-            new(users.First().Id, _startStation, _endStation, _affectedStations, _endTime),
-        };
-
-        var waterlooClient = Substitute.For<IWaterlooClient>();
-        waterlooClient.GetAffectedUsersAsync(
-            Arg.Any<Guid>(),
-            Arg.Any<Guid>(),
-            Arg.Any<Guid>(),
-            Arg.Any<Severity>(),
-            Arg.Any<TimeOnly>(),
-            Arg.Any<DayOfWeek>())
-            .Returns(Result.Success<IEnumerable<AffectedUser>>(affectedUsers));
-
-        var userDetails = new List<UserDetails>
-        {
-            new(affectedUsers.First().Id, "+447345678901", PhoneOS.Android),
-        };
-
-        var stratfordClient = Substitute.For<IStratfordClient>();
-        stratfordClient.GetUserDetailsAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(Result.Success<IEnumerable<UserDetails>>(userDetails));
-
-        var smsClient = Substitute.For<ISmsClient>();
-        smsClient.SendAsync(Arg.Any<string>(), Arg.Any<string>())
-            .Returns(Result.Failure("It failed dude."));
-
-        var disruptionNotifer = new DisruptionNotifier(
-         smsClient,
-         _serviceBusClient,
-         waterlooClient,
-         stratfordClient,
-         _messagerFormatter,
-         _iServiceBusOptions,
-         notifiedRepository);
-
-        await disruptionNotifer.NotifyDisruptionAsync(disruption);
-
-        var notificationsSents = _notificationSender.ReceivedCalls();
-        notificationsSents.Should().HaveCount(1);
-
-        var message = (ServiceBusMessage)notificationsSents.First().GetArguments()[0]!;
-        var notification = message.Body.ToObjectFromJson<Notification>();
-
-        notification!.UserId.Should().Be(affectedUsers.First().Id);
-        notification!.DisruptionId.Should().Be(disruption.Id);
-        notification!.LineId.Should().Be(_line.Id);
-        notification!.StartStationId.Should().Be(_startStation.Id);
-        notification!.EndStationId.Should().Be(_endStation.Id);
-        notification!.NotificationSentBy.Should().Be(NotificationSentBy.Failed);
-        notification!.AffectedStationIds.Should().BeEquivalentTo(_affectedStations.Select(x => x.Id).ToList());
-    }
-
-    [Fact]
-    public async Task DisruptionNotifier_NotifyDisruptionResolvedAsync_Sends_Notification_Successfully()
-    {
-        var disruptionEnd = new DisruptionEnd(Guid.NewGuid(), DateTime.UtcNow);
-        var users = new List<User>
-        {
-            new User(
-                Guid.NewGuid(),
-                disruptionEnd.Id,
-                _line,
-                _startStation,
-                _endStation,
-                Severity.Severe,
-                "+447123456789",
-                _endTime,
-                _affectedStations)
-        };
-
-        var notifiedRepository = Substitute.For<IUserNotifiedRepository>();
-
-        notifiedRepository.GetUsersByDisruptionIdAsync(Arg.Any<Guid>())
-            .Returns(users);
-
-        notifiedRepository.SaveUsersAsync(Arg.Any<IEnumerable<User>>())
-            .Returns(Result.Success());
-
-        notifiedRepository.DeleteByDisruptionIdAsync(Arg.Any<Guid>())
-            .Returns(Task.CompletedTask);
-
-        var waterlooClient = Substitute.For<IWaterlooClient>();
-        waterlooClient.GetAffectedUsersAsync(
-            Arg.Any<Guid>(),
-            Arg.Any<Guid>(),
-            Arg.Any<Guid>(),
-            Arg.Any<Severity>(),
-            Arg.Any<TimeOnly>(),
-            Arg.Any<DayOfWeek>())
-            .Returns(Result.Success(Enumerable.Empty<AffectedUser>()));
-
-        var stratfordClient = Substitute.For<IStratfordClient>();
-        stratfordClient.GetUserDetailsAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(Result.Success(Enumerable.Empty<UserDetails>()));
-
-        var disruptionNotifer = new DisruptionNotifier(
-             _smsClient,
-             _serviceBusClient,
-             waterlooClient,
-             stratfordClient,
-             _messagerFormatter,
-             _iServiceBusOptions,
-             notifiedRepository);
-
-        await disruptionNotifer.NotifyDisruptionResolvedAsync(disruptionEnd);
-
-        var smsSent = _smsClient.ReceivedCalls();
-        smsSent.Should().HaveCount(1);
-
-        var sentPhoneNumber = (string)smsSent.First().GetArguments()[0]!;
-        sentPhoneNumber.Should().Be(users.First().PhoneNumber);
-
-        var disruptionDeleted = notifiedRepository.ReceivedCalls();
-        disruptionDeleted.Should().HaveCount(2);
-        var disruptionId = (Guid)disruptionDeleted.Last().GetArguments()[0]!;
-        disruptionId.Should().Be(disruptionEnd.Id);
-    }
-
-    [Fact]
-    public async Task DisruptionNotifier_NotifyDisruptionAsync_TimeExpired_Does_Not_Send()
-    {
-        var severityId = Guid.NewGuid();
-
-        var disruption = new Disruption(
-           Guid.NewGuid(),
-           _line,
-           _startStation.Id,
-           _endStation.Id,
-           Severity.Minor,
-           severityId,
-           Guid.NewGuid());
-
-        var notifiedRepository = Substitute.For<IUserNotifiedRepository>();
-
-        notifiedRepository.GetUsersByDisruptionIdAsync(Arg.Any<Guid>())
-            .Returns(Enumerable.Empty<User>());
-
-        notifiedRepository.SaveUsersAsync(Arg.Any<IEnumerable<User>>())
-            .Returns(Result.Success());
-
-        notifiedRepository.DeleteByDisruptionIdAsync(Arg.Any<Guid>())
-            .Returns(Task.CompletedTask);
-
-        var thirtyMinutesAgo = TimeOnly.FromDateTime(DateTime.UtcNow.AddMinutes(-30));
-
-        var affectedUsers = new List<AffectedUser>
-        {
-            new(Guid.NewGuid(), _startStation, _endStation, _affectedStations, thirtyMinutesAgo),
-        };
-
-        var waterlooClient = Substitute.For<IWaterlooClient>();
-        waterlooClient.GetAffectedUsersAsync(
-            Arg.Any<Guid>(),
-            Arg.Any<Guid>(),
-            Arg.Any<Guid>(),
-            Arg.Any<Severity>(),
-            Arg.Any<TimeOnly>(),
-            Arg.Any<DayOfWeek>())
-            .Returns(Result.Success<IEnumerable<AffectedUser>>(affectedUsers));
-
-        var userDetails = new List<UserDetails>
-        {
-            new(affectedUsers.First().Id, "+447345678901", PhoneOS.Android),
-        };
-
-        var stratfordClient = Substitute.For<IStratfordClient>();
-        stratfordClient.GetUserDetailsAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(Result.Success<IEnumerable<UserDetails>>(userDetails));
-
-        var disruptionNotifer = new DisruptionNotifier(
-         _smsClient,
-         _serviceBusClient,
-         waterlooClient,
-         stratfordClient,
-         _messagerFormatter,
-         _iServiceBusOptions,
-         notifiedRepository);
-
-        await disruptionNotifer.NotifyDisruptionAsync(disruption);
-
-        var notificationsSent = _notificationSender.ReceivedCalls();
-        notificationsSent.Should().HaveCount(0);
-
-        var smsSent = _smsClient.ReceivedCalls();
-        smsSent.Should().HaveCount(0);
+        capturedUsers.Count().Should().Be(1);
+        capturedUsers.First().Id.Should().Be(affectedUsers.First().Id);
     }
 }
