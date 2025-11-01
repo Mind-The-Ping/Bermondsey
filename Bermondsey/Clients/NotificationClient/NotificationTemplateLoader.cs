@@ -6,7 +6,7 @@ namespace Bermondsey.Clients.NotificationClient;
 public static class NotificationTemplateLoader
 {
     private static readonly string BasePath =
-        Path.Combine(AppContext.BaseDirectory, "NotificationsTemplate");
+        Path.Combine(AppContext.BaseDirectory, "NotificationTemplates");
 
     public static Result<string> BuildPayload(
         string templateName, 

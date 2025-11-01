@@ -304,7 +304,19 @@ public class UserNotifiedRepositoryTests : IAsyncLifetime
         await repo.SaveUsersAsync(users1);
 
 
-        var updatedUser = user with { Severity = Severity.Severe };
+        var updatedUser = new User(
+            user.Id,
+            disruptionId,
+            line,
+            startStation,
+            endStation,
+            Severity.Severe,
+            "+441234567890",
+            PhoneOS.Android,
+            TimeOnly.FromDateTime(DateTime.UtcNow.AddMinutes(10)),
+            affectedStations);
+
+
         var users2 = new List<User>
         {
             updatedUser

@@ -60,11 +60,7 @@ public class DisruptionConsumer
         {
             var json = message.Body.ToArray();
             var messageJson = JsonSerializer.Deserialize<DisruptionEnd>(json);
-            var result = await _notifier.NotifyDisruptionResolvedAsync(messageJson!);
-
-            if (result.IsFailure) {
-                _logger.LogError(result.Error);
-            }
+            await _notifier.NotifyDisruptionResolvedAsync(messageJson!);
         }
         catch (Exception ex) {
             _logger.LogError(ex, "Could not deserialize disruption.");

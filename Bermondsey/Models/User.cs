@@ -1,13 +1,26 @@
 ﻿namespace Bermondsey.Models;
 
-public record User(
-    Guid Id, 
-    Guid DisruptionId,
-    Line Line,
-    Station StartStation,
-    Station EndStation,
-    Severity Severity,
-    string PhoneNumber,
-    PhoneOS PhoneOS,
-    TimeOnly EndTime,
-    IEnumerable<Station> AffectedStations);
+public class User(
+    Guid id,
+    Guid disruptionId,
+    Line line,
+    Station startStation,
+    Station endStation,
+    Severity severity,
+    string phoneNumber,
+    PhoneOS phoneOS,
+    TimeOnly endTime,
+    IEnumerable<Station> affectedStations)
+{
+    public Guid Id { get; init; } = id;
+    public Guid DisruptionId { get; init; } = disruptionId;
+    public Guid? NotificationId { get; set; }
+    public Line Line { get; init; } = line;
+    public Station StartStation { get; init; } = startStation;
+    public Station EndStation { get; init; } = endStation;
+    public Severity Severity { get; init; } = severity;
+    public string PhoneNumber { get; init; } = phoneNumber;
+    public PhoneOS PhoneOS { get; init; } = phoneOS;
+    public TimeOnly EndTime { get; init; } = endTime;
+    public IEnumerable<Station> AffectedStations { get; init; } = affectedStations;
+}

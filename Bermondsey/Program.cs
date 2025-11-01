@@ -5,6 +5,7 @@ using Bermondsey.Clients.SmsClient;
 using Bermondsey.Clients.Stratford;
 using Bermondsey.Clients.Waterloo;
 using Bermondsey.MessageTemplate;
+using Bermondsey.NotificationOrchestrator;
 using Bermondsey.Options;
 using Bermondsey.Repositories;
 using Microsoft.Azure.Functions.Worker;
@@ -69,6 +70,7 @@ builder.Services.AddScoped<INotifcationClient, NotificationClient>();
 builder.Services.AddScoped<IWaterlooClient, WaterlooClient>();
 builder.Services.AddScoped<IStratfordClient, StratfordClient>();
 builder.Services.AddScoped<IUserNotifiedRepository, UserNotifiedRepository>();
+builder.Services.AddScoped<INotificationOrchestrator, NotificationOrchestrator>();
 builder.Services.AddScoped<DisruptionNotifier>();
 
 builder.ConfigureFunctionsWebApplication();
