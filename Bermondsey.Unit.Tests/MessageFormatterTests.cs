@@ -15,8 +15,8 @@ public class MessageFormatterTests
         {
             Delay = new TemplateSection()
             {
-                Title = "Your journey from {origin} to {destination} has a {severity} issue.",
-                Body = "Your journey on the {line} line from {origin} to {destination} has {severity} delays." +
+                Title = "Your journey from {origin} to {destination} has a {severity} delay.",
+                Body = "Your journey on the {line} line from {origin} to {destination} has {severity} delay." +
                 " The following stations are affected: {stations}."
             },
             Disruption = new TemplateSection()
@@ -53,8 +53,8 @@ public class MessageFormatterTests
         var stationList = string.Join(", ", stations.Select(x => x.Name));
 
         var result = _messageFormatter.FormatDisruption(line, origin, destination, severity, stations);
-        result.Title.Should().Be($"Your journey from {origin} to {destination} has a {severity} issue.");
-        result.Body.Should().Be($"Your journey on the {line} line from {origin} to {destination} has {severity} delays." +
+        result.Title.Should().Be($"Your journey from {origin} to {destination} has a {severity} delay.");
+        result.Body.Should().Be($"Your journey on the {line} line from {origin} to {destination} has {severity} delay." +
                 $" The following stations are affected: {stationList}.");
     }
 

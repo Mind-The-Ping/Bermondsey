@@ -30,14 +30,4 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
-   <ItemGroup>
-	<None Update="NotificationTemplates\**\*.json">
-		<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-	</None>
-   </ItemGroup>
-
-   <ItemGroup>
-     <Folder Include="NotificationTemplates\" />
-   </ItemGroup>
-
 </Project>
