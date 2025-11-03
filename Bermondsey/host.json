@@ -3,11 +3,14 @@
   "logging": {
     "logLevel": {
       "default": "Information",
-      "Function.Bermondsey": "Information"
+      "Function": "Information",
+      "Host": "Error",
+      "Host.Aggregator": "Information"
     },
     "applicationInsights": {
       "samplingSettings": {
-        "isEnabled": false
+        "isEnabled": false,
+        "excludedTypes": "Request"
       },
       "enableLiveMetricsFilters": true
     }
