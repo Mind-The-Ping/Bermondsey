@@ -26,6 +26,10 @@ public class NotificationClient : INotifcationClient
     FormattedMessage message,
     CancellationToken cancellationToken = default)
     {
+        if(phoneOS == PhoneOS.Unknown) {
+            return Result.Failure("Can not send notification without known PhoneOS");
+        }
+
         try
         {
             string platform = phoneOS.ToString().ToLower();
