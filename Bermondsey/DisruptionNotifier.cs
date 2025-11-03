@@ -66,7 +66,7 @@ public class DisruptionNotifier
 
 
         var userDetails = await _stratfordClient.GetUserDetailsAsync(
-            newUsers.Select(x => x.Id));
+            newUsers.Select(x => x.Id).ToList());
 
         if (userDetails.IsFailure) {
             return Result.Failure($"Failed to get users details : {userDetails.Error}");
