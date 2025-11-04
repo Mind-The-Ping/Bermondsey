@@ -49,12 +49,14 @@ public class NotificationTemplateLoaderTests
 
         var expected = $@"
         {{
-          ""notification"": {{
-            ""title"": ""{title}"",
-            ""body"": ""{body}""
-          }},
-          ""data"": {{
-            ""id"": ""{notificationId}""
+          ""message"": {{
+            ""notification"": {{
+              ""title"": ""{title}"",
+              ""body"": ""{body}""
+            }},
+            ""data"": {{
+              ""id"": ""{notificationId}""
+            }}
           }}
         }}";
 
