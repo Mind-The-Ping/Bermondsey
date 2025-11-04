@@ -1,9 +1,11 @@
 {
-  "notification": {
-    "title": "{title}",
-    "body": "{body}"
-  },
-  "data": {
-    "id": "{id}"
+  "message": {
+    "notification": {
+      "title": "{title}",
+      "body": "{body}"
+    },
+    "data": {
+      "id": "{id}"
+    }
   }
 }
