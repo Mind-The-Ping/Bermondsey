@@ -621,7 +621,7 @@ public class NotificationOrchestratorTests
             var severity = (Severity)severityValues.GetValue(random.Next(severityValues.Length))!;
             var phoneOs = (PhoneOS)phoneOsValues.GetValue(random.Next(phoneOsValues.Length))!;
             var phoneNumber = $"+44{random.Next(700000000, 799999999)}";
-            var time = TimeOnly.FromDateTime(DateTime.UtcNow.AddHours(random.Next(1, 7)));
+            var time = TimeOnly.FromDateTime(DateTime.UtcNow.AddHours(1));
 
             var user = new User(
                 Guid.NewGuid(),

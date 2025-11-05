@@ -98,11 +98,11 @@ public class NotificationOrchestrator : INotificationOrchestrator
                         notificationId,
                         user.Id,
                         user.Line.Id,
-                        user.DisruptionId,
+                        disruption.Id,
                         user.StartStation.Id,
                         user.EndStation.Id,
                         disruption.SeverityId,
-                        disruption.Id,
+                        disruption.DescriptionId,
                         sentBy,
                         [.. user.AffectedStations.Select(x => x.Id)]);
                 }
