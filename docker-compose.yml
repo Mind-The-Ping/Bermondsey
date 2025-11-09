@@ -5,7 +5,7 @@ services:
     image: mongo:6.0
     container_name: test-mongodb
     ports:
-      - "27017:27017"   # Exposes MongoDB on localhost
+      - "27017:27017"
     environment:
       MONGO_INITDB_ROOT_USERNAME: testuser
       MONGO_INITDB_ROOT_PASSWORD: testpassword

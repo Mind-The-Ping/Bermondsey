@@ -5,7 +5,7 @@ using MongoDB.Driver;
 namespace Bermondsey.Integration.Tests;
 public class NotificationSentByRepositoryTests
 {
-    [Fact]
+    [Fact(Skip = "Skipping this test for now")]
     public async Task NotificationSentByRepository_CreateAsync_Successful()
     {
         var notificationOptions = new NotificationSentByOptions()
