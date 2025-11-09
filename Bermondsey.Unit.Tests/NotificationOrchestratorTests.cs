@@ -1,7 +1,5 @@
-﻿using Azure.Messaging.ServiceBus;
-using Bermondsey.Clients.NotificationClient;
+﻿using Bermondsey.Clients.NotificationClient;
 using Bermondsey.Clients.SmsClient;
-using Bermondsey.Messages;
 using Bermondsey.MessageTemplate;
 using Bermondsey.Models;
 using Bermondsey.Options;
@@ -14,31 +12,16 @@ namespace Bermondsey.Unit.Tests;
 public class NotificationOrchestratorTests
 {
     private readonly ISmsClient _smsClient;
-    private readonly INotifcationClient _notifcationClient;
-    private readonly ServiceBusClient _serviceBusClient;
-    private readonly ServiceBusSender _notificationSender;
-    private readonly MessageFormatter _messagerFormatter;
+    private readonly INotifcationClient _notificationClient;
+    private readonly INotificationSentByRepository _repository;
 
     private readonly NotificationOrchestrator.NotificationOrchestrator _notificationOrchestrator;
 
     public NotificationOrchestratorTests()
     {
         _smsClient = Substitute.For<ISmsClient>();
-        _notifcationClient = Substitute.For<INotifcationClient>();
-        _serviceBusClient = Substitute.For<ServiceBusClient>();
-        _notificationSender = Substitute.For<ServiceBusSender>();
-
-        var serviceBusOptions = new ServiceBusOptions()
-        {
-            Queues = new QueueOptions()
-            {
-                Notifications = "queue.4",
-            }
-        };
-
-        _serviceBusClient
-         .CreateSender(serviceBusOptions.Queues.Notifications)
-         .Returns(_notificationSender);
+        _notificationClient = Substitute.For<INotifcationClient>();
+        _repository = Substitute.For<INotificationSentByRepository>();
 
         var templateOptions = Microsoft.Extensions.Options.Options.Create(new MessageTemplatesOptions
         {
@@ -62,35 +45,21 @@ public class NotificationOrchestratorTests
         });
 
         var iMessageTemplatesOptions = Microsoft.Extensions.Options.Options.Create(templateOptions);
-        _messagerFormatter = new MessageFormatter(iMessageTemplatesOptions.Value);
+        var messagerFormatter = new MessageFormatter(iMessageTemplatesOptions.Value);
 
         var logger = Substitute.For<ILogger<NotificationOrchestrator.NotificationOrchestrator>>();
 
-        var iServiceBusOptions = Microsoft.Extensions.Options.Options.Create(serviceBusOptions);
-
         _notificationOrchestrator = new NotificationOrchestrator.NotificationOrchestrator(
             _smsClient,
-            _messagerFormatter,
-            _serviceBusClient,
-            _notifcationClient,
-            logger,
-            iServiceBusOptions);
+            messagerFormatter,
+            _notificationClient,
+            _repository,
+            logger);
     }
 
     [Fact]
     public async Task NotificationOrchestrator_SendDisruptionNotificationAsync_Push_Notification_Successful()
     {
-        var line = new Line(Guid.Parse("9e3a7f43-b6c4-4f12-9a72-ffbe2d15b9e6"), "Metropolitan");
-
-        var disruption = new Disruption(
-            Guid.NewGuid(),
-            line,
-            Guid.Parse("b5fd3078-17d7-4e45-8ff6-d7d85025e1b0"),
-            Guid.Parse("7d89b35f-9a87-49df-98ff-fd98f1f67235"),
-            Severity.Severe,
-            Guid.NewGuid(),
-            Guid.NewGuid());
-
         var affectedStations = new List<Station>()
         {
             new(Guid.Parse("6187fce5-a122-4899-832a-1d33c616da94"), "Moor Park"),
@@ -99,62 +68,47 @@ public class NotificationOrchestratorTests
             new(Guid.Parse("b1e8fe87-98d5-4d8a-bb64-229aaa23b834"), "Pinner")
         };
 
-        var users = new List<User>()
-        {
-            new(
-                Guid.NewGuid(), 
-                disruption.Id,
-                line,
+        var user = new User(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                new Line(Guid.Parse("9e3a7f43-b6c4-4f12-9a72-ffbe2d15b9e6"), "Metropolitan"),
                 new(Guid.Parse("6187fce5-a122-4899-832a-1d33c616da94"), "Moor Park"),
                 new(Guid.Parse("b1e8fe87-98d5-4d8a-bb64-229aaa23b834"), "Pinner"),
                 Severity.Severe,
                 "+447400123456",
                 PhoneOS.Android,
                 TimeOnly.FromDateTime(DateTime.UtcNow.AddHours(5)),
-                affectedStations)
-        };
+                affectedStations);
 
-        _notifcationClient.SendAsync(
-            users.First().Id,
-            users.First().PhoneOS,
+        _notificationClient.SendAsync(
+            user.Id,
+            user.PhoneOS,
             Arg.Any<Guid>(),
             Arg.Any<FormattedMessage>())
             .Returns(Result.Success());
 
-        await _notificationOrchestrator.SendDisruptionNotificationAsync(disruption, users);
+        NotificationStatus capturedNotification = null!;
 
-        var notificationSent = _notifcationClient.ReceivedCalls();
+        _repository.CreateAsync(Arg.Do<NotificationStatus>(c => capturedNotification = c))
+            .Returns(Task.CompletedTask);
+
+
+        await _notificationOrchestrator.SendDisruptionNotificationAsync(user);
+
+        var notificationSent = _notificationClient.ReceivedCalls();
         notificationSent.Should().HaveCount(1);
 
-        var notificationSenderSent = _notificationSender.ReceivedCalls();
-        notificationSenderSent.Should().HaveCount(1);
+        var sentStatusSaved = _repository.ReceivedCalls();
+        sentStatusSaved.Should().HaveCount(1);
 
-        var message = (ServiceBusMessage)notificationSenderSent.First().GetArguments()[0]!;
-        var notification = message.Body.ToObjectFromJson<Notification>();
-
-        notification!.UserId.Should().Be(users.First().Id);
-        notification!.DisruptionId.Should().Be(disruption.Id);
-        notification!.LineId.Should().Be(line.Id);
-        notification!.StartStationId.Should().Be(users.First().StartStation.Id);
-        notification!.EndStationId.Should().Be(users.First().EndStation.Id);
-        notification!.NotificationSentBy.Should().Be(NotificationSentBy.Push);
-        notification!.AffectedStationIds.Should().BeEquivalentTo(affectedStations.Select(x => x.Id).ToList());
+        capturedNotification.Id.Should().Be(user.NotificationId);
+        capturedNotification.NotificationSentBy.Should().Be(NotificationSentBy.Push);
     }
 
     [Fact]
     public async Task NotificationOrchestrator_SendDisruptionNotificationAsync_Sms_Text_Successful()
     {
-        var line = new Line(Guid.Parse("9e3a7f43-b6c4-4f12-9a72-ffbe2d15b9e6"), "Metropolitan");
-
-        var disruption = new Disruption(
-            Guid.NewGuid(),
-            line,
-            Guid.Parse("b5fd3078-17d7-4e45-8ff6-d7d85025e1b0"),
-            Guid.Parse("7d89b35f-9a87-49df-98ff-fd98f1f67235"),
-            Severity.Severe,
-            Guid.NewGuid(),
-            Guid.NewGuid());
-
         var affectedStations = new List<Station>()
         {
             new(Guid.Parse("6187fce5-a122-4899-832a-1d33c616da94"), "Moor Park"),
@@ -163,70 +117,46 @@ public class NotificationOrchestratorTests
             new(Guid.Parse("b1e8fe87-98d5-4d8a-bb64-229aaa23b834"), "Pinner")
         };
 
-        var users = new List<User>()
-        {
-            new(
+        var user = new User(
                 Guid.NewGuid(),
-                disruption.Id,
-                line,
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                new Line(Guid.Parse("9e3a7f43-b6c4-4f12-9a72-ffbe2d15b9e6"), "Metropolitan"),
                 new(Guid.Parse("6187fce5-a122-4899-832a-1d33c616da94"), "Moor Park"),
                 new(Guid.Parse("b1e8fe87-98d5-4d8a-bb64-229aaa23b834"), "Pinner"),
                 Severity.Severe,
                 "+447400123456",
                 PhoneOS.Android,
                 TimeOnly.FromDateTime(DateTime.UtcNow.AddHours(5)),
-                affectedStations)
-        };
+                affectedStations);
 
-        _notifcationClient.SendAsync(
+        _notificationClient.SendAsync(
             Arg.Any<Guid>(),
             Arg.Any<PhoneOS>(),
             Arg.Any<Guid>(),
             Arg.Any<FormattedMessage>())
             .Returns(Result.Failure("This failed."));
 
-        _smsClient.SendAsync(
-            users.First().PhoneNumber,
-            Arg.Any<FormattedMessage>())
-            .Returns(Result.Success());
+        NotificationStatus capturedNotification = null!;
 
-        await _notificationOrchestrator.SendDisruptionNotificationAsync(disruption, users);
+        _repository.CreateAsync(Arg.Do<NotificationStatus>(c => capturedNotification = c))
+            .Returns(Task.CompletedTask);
 
-        var notificationSent = _notifcationClient.ReceivedCalls();
+        await _notificationOrchestrator.SendDisruptionNotificationAsync(user);
+
+        var notificationSent = _notificationClient.ReceivedCalls();
         notificationSent.Should().HaveCount(1);
 
         var smsSent = _smsClient.ReceivedCalls();
         smsSent.Should().HaveCount(1);
 
-        var notificationSenderSent = _notificationSender.ReceivedCalls();
-        notificationSenderSent.Should().HaveCount(1);
-
-        var message = (ServiceBusMessage)notificationSenderSent.First().GetArguments()[0]!;
-        var notification = message.Body.ToObjectFromJson<Notification>();
-
-        notification!.UserId.Should().Be(users.First().Id);
-        notification!.DisruptionId.Should().Be(disruption.Id);
-        notification!.LineId.Should().Be(line.Id);
-        notification!.StartStationId.Should().Be(users.First().StartStation.Id);
-        notification!.EndStationId.Should().Be(users.First().EndStation.Id);
-        notification!.NotificationSentBy.Should().Be(NotificationSentBy.Sms);
-        notification!.AffectedStationIds.Should().BeEquivalentTo(affectedStations.Select(x => x.Id).ToList());
+        capturedNotification.Id.Should().Be(user.NotificationId);
+        capturedNotification.NotificationSentBy.Should().Be(NotificationSentBy.Sms);
     }
 
     [Fact]
     public async Task NotificationOrchestrator_SendDisruptionNotificationAsync_Fails()
     {
-        var line = new Line(Guid.Parse("9e3a7f43-b6c4-4f12-9a72-ffbe2d15b9e6"), "Metropolitan");
-
-        var disruption = new Disruption(
-            Guid.NewGuid(),
-            line,
-            Guid.Parse("b5fd3078-17d7-4e45-8ff6-d7d85025e1b0"),
-            Guid.Parse("7d89b35f-9a87-49df-98ff-fd98f1f67235"),
-            Severity.Severe,
-            Guid.NewGuid(),
-            Guid.NewGuid());
-
         var affectedStations = new List<Station>()
         {
             new(Guid.Parse("6187fce5-a122-4899-832a-1d33c616da94"), "Moor Park"),
@@ -235,22 +165,20 @@ public class NotificationOrchestratorTests
             new(Guid.Parse("b1e8fe87-98d5-4d8a-bb64-229aaa23b834"), "Pinner")
         };
 
-        var users = new List<User>()
-        {
-            new(
+        var user = new User(
                 Guid.NewGuid(),
-                disruption.Id,
-                line,
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                new Line(Guid.Parse("9e3a7f43-b6c4-4f12-9a72-ffbe2d15b9e6"), "Metropolitan"),
                 new(Guid.Parse("6187fce5-a122-4899-832a-1d33c616da94"), "Moor Park"),
                 new(Guid.Parse("b1e8fe87-98d5-4d8a-bb64-229aaa23b834"), "Pinner"),
                 Severity.Severe,
                 "+447400123456",
                 PhoneOS.Android,
                 TimeOnly.FromDateTime(DateTime.UtcNow.AddHours(5)),
-                affectedStations)
-        };
+                affectedStations);
 
-        _notifcationClient.SendAsync(
+        _notificationClient.SendAsync(
             Arg.Any<Guid>(),
             Arg.Any<PhoneOS>(),
             Arg.Any<Guid>(),
@@ -258,48 +186,24 @@ public class NotificationOrchestratorTests
             .Returns(Result.Failure("This failed."));
 
         _smsClient.SendAsync(
-            Arg.Any<string>(),
-            Arg.Any<FormattedMessage>())
-            .Returns(Result.Failure("This failed."));
+         Arg.Any<string>(),
+         Arg.Any<FormattedMessage>())
+         .Returns(Result.Failure("This failed."));
 
-        await _notificationOrchestrator.SendDisruptionNotificationAsync(disruption, users);
+        NotificationStatus capturedNotification = null!;
 
-        var notificationSent = _notifcationClient.ReceivedCalls();
-        notificationSent.Should().HaveCount(1);
+        _repository.CreateAsync(Arg.Do<NotificationStatus>(c => capturedNotification = c))
+            .Returns(Task.CompletedTask);
 
-        var smsSent = _smsClient.ReceivedCalls();
-        smsSent.Should().HaveCount(1);
+        await _notificationOrchestrator.SendDisruptionNotificationAsync(user);
 
-        var notificationSenderSent = _notificationSender.ReceivedCalls();
-        notificationSenderSent.Should().HaveCount(1);
-
-        var message = (ServiceBusMessage)notificationSenderSent.First().GetArguments()[0]!;
-        var notification = message.Body.ToObjectFromJson<Notification>();
-
-        notification!.UserId.Should().Be(users.First().Id);
-        notification!.DisruptionId.Should().Be(disruption.Id);
-        notification!.LineId.Should().Be(line.Id);
-        notification!.StartStationId.Should().Be(users.First().StartStation.Id);
-        notification!.EndStationId.Should().Be(users.First().EndStation.Id);
-        notification!.NotificationSentBy.Should().Be(NotificationSentBy.Failed);
-        notification!.AffectedStationIds.Should().BeEquivalentTo(affectedStations.Select(x => x.Id).ToList());
+        capturedNotification.Id.Should().Be(user.NotificationId);
+        capturedNotification.NotificationSentBy.Should().Be(NotificationSentBy.Failed);
     }
-
 
     [Fact]
     public async Task NotificationOrchestrator_SendDisruptionNotificationAsync_Expired_Does_Not_Send_Notification()
     {
-        var line = new Line(Guid.Parse("9e3a7f43-b6c4-4f12-9a72-ffbe2d15b9e6"), "Metropolitan");
-
-        var disruption = new Disruption(
-            Guid.NewGuid(),
-            line,
-            Guid.Parse("b5fd3078-17d7-4e45-8ff6-d7d85025e1b0"),
-            Guid.Parse("7d89b35f-9a87-49df-98ff-fd98f1f67235"),
-            Severity.Severe,
-            Guid.NewGuid(),
-            Guid.NewGuid());
-
         var affectedStations = new List<Station>()
         {
             new(Guid.Parse("6187fce5-a122-4899-832a-1d33c616da94"), "Moor Park"),
@@ -308,67 +212,30 @@ public class NotificationOrchestratorTests
             new(Guid.Parse("b1e8fe87-98d5-4d8a-bb64-229aaa23b834"), "Pinner")
         };
 
-        var users = new List<User>()
-        {
-            new(
+        var user = new User(
                 Guid.NewGuid(),
-                disruption.Id,
-                line,
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                new Line(Guid.Parse("9e3a7f43-b6c4-4f12-9a72-ffbe2d15b9e6"), "Metropolitan"),
                 new(Guid.Parse("6187fce5-a122-4899-832a-1d33c616da94"), "Moor Park"),
                 new(Guid.Parse("b1e8fe87-98d5-4d8a-bb64-229aaa23b834"), "Pinner"),
                 Severity.Severe,
                 "+447400123456",
                 PhoneOS.Android,
                 TimeOnly.FromDateTime(DateTime.UtcNow.AddHours(-1)),
-                affectedStations)
-        };
+                affectedStations);
 
-        _notifcationClient.SendAsync(
+        _notificationClient.SendAsync(
             Arg.Any<Guid>(),
             Arg.Any<PhoneOS>(),
             Arg.Any<Guid>(),
             Arg.Any<FormattedMessage>())
             .Returns(Result.Success());
 
-        await _notificationOrchestrator.SendDisruptionNotificationAsync(disruption, users);
+        await _notificationOrchestrator.SendDisruptionNotificationAsync(user);
 
-        var notificationSent = _notifcationClient.ReceivedCalls();
+        var notificationSent = _notificationClient.ReceivedCalls();
         notificationSent.Should().HaveCount(0);
-
-        var notificationSenderSent = _notificationSender.ReceivedCalls();
-        notificationSenderSent.Should().HaveCount(0);
-    }
-
-    [Fact]
-    public async Task NotificationOrchestrator_SendDisruptionNotificationAsync_1000_Users_Successful()
-    {
-        var userCount = 1000;
-
-        var disruption = new Disruption(
-         Guid.NewGuid(),
-         new Line(Guid.Parse("9e3a7f43-b6c4-4f12-9a72-ffbe2d15b9e6"), "Metropolitan"),
-         Guid.Parse("b5fd3078-17d7-4e45-8ff6-d7d85025e1b0"),
-         Guid.Parse("7d89b35f-9a87-49df-98ff-fd98f1f67235"),
-         Severity.Severe,
-         Guid.NewGuid(),
-         Guid.NewGuid());
-
-        var users = GenerateRandomUsers(userCount);
-
-        _notifcationClient.SendAsync(
-           Arg.Any<Guid>(),
-           Arg.Any<PhoneOS>(),
-           Arg.Any<Guid>(),
-           Arg.Any<FormattedMessage>())
-           .Returns(Result.Success());
-
-        await _notificationOrchestrator.SendDisruptionNotificationAsync(disruption, users);
-
-        var notificationSent = _notifcationClient.ReceivedCalls();
-        notificationSent.Should().HaveCount(userCount);
-
-        var notificationSenderSent = _notificationSender.ReceivedCalls();
-        notificationSenderSent.Should().HaveCount(userCount);
     }
 
     [Fact]
@@ -382,9 +249,8 @@ public class NotificationOrchestratorTests
             new(Guid.Parse("b1e8fe87-98d5-4d8a-bb64-229aaa23b834"), "Pinner")
         };
 
-        var users = new List<User>()
-        {
-            new(
+        var user = new User(
+                Guid.NewGuid(),
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 new Line(Guid.Parse("9e3a7f43-b6c4-4f12-9a72-ffbe2d15b9e6"), "Metropolitan"),
@@ -394,28 +260,31 @@ public class NotificationOrchestratorTests
                 "+447400123456",
                 PhoneOS.Android,
                 TimeOnly.FromDateTime(DateTime.UtcNow.AddHours(5)),
-                affectedStations)
-        };
+                affectedStations);
 
-        users.First().NotificationId = Guid.NewGuid();
-
-        _notifcationClient.SendAsync(
-            users.First().Id,
-            users.First().PhoneOS,
+        _notificationClient.SendAsync(
+            user.Id,
+            user.PhoneOS,
             Arg.Any<Guid>(),
             Arg.Any<FormattedMessage>())
             .Returns(Result.Success());
 
-        await _notificationOrchestrator.SendResolutionNotificationAsync(users);
+        NotificationStatus capturedNotification = null!;
 
-        var notificationSent = _notifcationClient.ReceivedCalls();
+        _repository.CreateAsync(Arg.Do<NotificationStatus>(c => capturedNotification = c))
+            .Returns(Task.CompletedTask);
+
+
+        await _notificationOrchestrator.SendResolutionNotificationAsync(user);
+
+        var notificationSent = _notificationClient.ReceivedCalls();
         notificationSent.Should().HaveCount(1);
 
-        var smsSent = _smsClient.ReceivedCalls();
-        smsSent.Should().HaveCount(0);
+        var sentStatusSaved = _repository.ReceivedCalls();
+        sentStatusSaved.Should().HaveCount(1);
 
-        var notificationSenderSent = _notificationSender.ReceivedCalls();
-        notificationSenderSent.Should().HaveCount(0);
+        capturedNotification.Id.Should().Be(user.NotificationId);
+        capturedNotification.NotificationSentBy.Should().Be(NotificationSentBy.Push);
     }
 
     [Fact]
@@ -429,9 +298,8 @@ public class NotificationOrchestratorTests
             new(Guid.Parse("b1e8fe87-98d5-4d8a-bb64-229aaa23b834"), "Pinner")
         };
 
-        var users = new List<User>()
-        {
-            new(
+        var user = new User(
+                Guid.NewGuid(),
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 new Line(Guid.Parse("9e3a7f43-b6c4-4f12-9a72-ffbe2d15b9e6"), "Metropolitan"),
@@ -441,37 +309,34 @@ public class NotificationOrchestratorTests
                 "+447400123456",
                 PhoneOS.Android,
                 TimeOnly.FromDateTime(DateTime.UtcNow.AddHours(5)),
-                affectedStations)
-        };
+                affectedStations);
 
-        users.First().NotificationId = Guid.NewGuid();
-
-        _notifcationClient.SendAsync(
+        _notificationClient.SendAsync(
             Arg.Any<Guid>(),
             Arg.Any<PhoneOS>(),
             Arg.Any<Guid>(),
             Arg.Any<FormattedMessage>())
-            .Returns(Result.Failure("It failed."));
+            .Returns(Result.Failure("This failed."));
 
-        _smsClient.SendAsync(
-           users.First().PhoneNumber,
-           Arg.Any<FormattedMessage>())
-           .Returns(Result.Success());
+        NotificationStatus capturedNotification = null!;
 
-        await _notificationOrchestrator.SendResolutionNotificationAsync(users);
+        _repository.CreateAsync(Arg.Do<NotificationStatus>(c => capturedNotification = c))
+            .Returns(Task.CompletedTask);
 
-        var notificationSent = _notifcationClient.ReceivedCalls();
+        await _notificationOrchestrator.SendResolutionNotificationAsync(user);
+
+        var notificationSent = _notificationClient.ReceivedCalls();
         notificationSent.Should().HaveCount(1);
 
         var smsSent = _smsClient.ReceivedCalls();
         smsSent.Should().HaveCount(1);
 
-        var notificationSenderSent = _notificationSender.ReceivedCalls();
-        notificationSenderSent.Should().HaveCount(0);
+        capturedNotification.Id.Should().Be(user.NotificationId);
+        capturedNotification.NotificationSentBy.Should().Be(NotificationSentBy.Sms);
     }
 
     [Fact]
-    public async Task NotificationOrchestrator_SendResolutionNotificationAsync_Failed()
+    public async Task NotificationOrchestrator_SendResolutionNotificationAsync_Fails()
     {
         var affectedStations = new List<Station>()
         {
@@ -481,9 +346,8 @@ public class NotificationOrchestratorTests
             new(Guid.Parse("b1e8fe87-98d5-4d8a-bb64-229aaa23b834"), "Pinner")
         };
 
-        var users = new List<User>()
-        {
-            new(
+        var user = new User(
+                Guid.NewGuid(),
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 new Line(Guid.Parse("9e3a7f43-b6c4-4f12-9a72-ffbe2d15b9e6"), "Metropolitan"),
@@ -493,33 +357,29 @@ public class NotificationOrchestratorTests
                 "+447400123456",
                 PhoneOS.Android,
                 TimeOnly.FromDateTime(DateTime.UtcNow.AddHours(5)),
-                affectedStations)
-        };
+                affectedStations);
 
-        users.First().NotificationId = Guid.NewGuid();
-
-        _notifcationClient.SendAsync(
+        _notificationClient.SendAsync(
             Arg.Any<Guid>(),
             Arg.Any<PhoneOS>(),
             Arg.Any<Guid>(),
             Arg.Any<FormattedMessage>())
-            .Returns(Result.Failure("It failed."));
+            .Returns(Result.Failure("This failed."));
 
         _smsClient.SendAsync(
-           users.First().PhoneNumber,
-           Arg.Any<FormattedMessage>())
-           .Returns(Result.Failure("This failed too nerd."));
+         Arg.Any<string>(),
+         Arg.Any<FormattedMessage>())
+         .Returns(Result.Failure("This failed."));
 
-        await _notificationOrchestrator.SendResolutionNotificationAsync(users);
+        NotificationStatus capturedNotification = null!;
 
-        var notificationSent = _notifcationClient.ReceivedCalls();
-        notificationSent.Should().HaveCount(1);
+        _repository.CreateAsync(Arg.Do<NotificationStatus>(c => capturedNotification = c))
+            .Returns(Task.CompletedTask);
 
-        var smsSent = _smsClient.ReceivedCalls();
-        smsSent.Should().HaveCount(1);
+        await _notificationOrchestrator.SendResolutionNotificationAsync(user);
 
-        var notificationSenderSent = _notificationSender.ReceivedCalls();
-        notificationSenderSent.Should().HaveCount(0);
+        capturedNotification.Id.Should().Be(user.NotificationId);
+        capturedNotification.NotificationSentBy.Should().Be(NotificationSentBy.Failed);
     }
 
     [Fact]
@@ -533,9 +393,8 @@ public class NotificationOrchestratorTests
             new(Guid.Parse("b1e8fe87-98d5-4d8a-bb64-229aaa23b834"), "Pinner")
         };
 
-        var users = new List<User>()
-        {
-            new(
+        var user = new User(
+                Guid.NewGuid(),
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 new Line(Guid.Parse("9e3a7f43-b6c4-4f12-9a72-ffbe2d15b9e6"), "Metropolitan"),
@@ -545,102 +404,18 @@ public class NotificationOrchestratorTests
                 "+447400123456",
                 PhoneOS.Android,
                 TimeOnly.FromDateTime(DateTime.UtcNow.AddHours(-1)),
-                affectedStations)
-        };
+                affectedStations);
 
-        users.First().NotificationId = Guid.NewGuid();
-
-        _notifcationClient.SendAsync(
+        _notificationClient.SendAsync(
             Arg.Any<Guid>(),
             Arg.Any<PhoneOS>(),
             Arg.Any<Guid>(),
             Arg.Any<FormattedMessage>())
             .Returns(Result.Success());
 
-        await _notificationOrchestrator.SendResolutionNotificationAsync(users);
+        await _notificationOrchestrator.SendResolutionNotificationAsync(user);
 
-        var notificationSent = _notifcationClient.ReceivedCalls();
+        var notificationSent = _notificationClient.ReceivedCalls();
         notificationSent.Should().HaveCount(0);
-
-        var notificationSenderSent = _notificationSender.ReceivedCalls();
-        notificationSenderSent.Should().HaveCount(0);
-    }
-
-    [Fact]
-    public async Task NotificationOrchestrator_SendResolutionNotificationAsync_1000_Users_Successful()
-    {
-        var userCount = 1000;
-        var users = GenerateRandomUsers(userCount);
-
-        _notifcationClient.SendAsync(
-           Arg.Any<Guid>(),
-           Arg.Any<PhoneOS>(),
-           Arg.Any<Guid>(),
-           Arg.Any<FormattedMessage>())
-           .Returns(Result.Success());
-
-        await _notificationOrchestrator.SendResolutionNotificationAsync(users);
-
-        var notificationSent = _notifcationClient.ReceivedCalls();
-        notificationSent.Should().HaveCount(userCount);
-
-        var notificationSenderSent = _notificationSender.ReceivedCalls();
-        notificationSenderSent.Should().HaveCount(0);
-    }
-
-    private List<User> GenerateRandomUsers(int count)
-    {
-        var random = new Random();
-
-        var stationNames = new[] { "Moor Park", "Northwood", "Pinner", "Uxbridge", "Baker Street", "Watford", "Harrow", "Chorleywood" };
-        var lineNames = new[] { "Metropolitan", "Central", "Jubilee", "Piccadilly", "Northern", "District", "Bakerloo" };
-
-        var users = new List<User>();
-
-        for (int i = 0; i < count; i++)
-        {
-            var line = new Line(Guid.NewGuid(), lineNames[random.Next(lineNames.Length)]);
-
-            var startStation = new Station(Guid.NewGuid(), stationNames[random.Next(stationNames.Length)]);
-            Station endStation;
-            do
-            {
-                endStation = new Station(Guid.NewGuid(), stationNames[random.Next(stationNames.Length)]);
-            } while (endStation.Name == startStation.Name);
-
-
-            var affectedStations = new List<Station>();
-            int affectedCount = random.Next(1, 5);
-            for (int j = 0; j < affectedCount; j++)
-            {
-                affectedStations.Add(new Station(Guid.NewGuid(), stationNames[random.Next(stationNames.Length)]));
-            }
-
-            var severityValues = Enum.GetValues<Severity>();
-            var phoneOsValues = Enum.GetValues<PhoneOS>();
-            var severity = (Severity)severityValues.GetValue(random.Next(severityValues.Length))!;
-            var phoneOs = (PhoneOS)phoneOsValues.GetValue(random.Next(phoneOsValues.Length))!;
-            var phoneNumber = $"+44{random.Next(700000000, 799999999)}";
-            var time = TimeOnly.FromDateTime(DateTime.UtcNow.AddHours(1));
-
-            var user = new User(
-                Guid.NewGuid(),
-                Guid.NewGuid(),
-                line,
-                startStation,
-                endStation,
-                severity,
-                phoneNumber,
-                phoneOs,
-                time,
-                affectedStations
-            );
-
-            user.NotificationId = Guid.NewGuid();
-
-            users.Add(user);
-        }
-
-        return users;
     }
 }
