@@ -1,5 +1,6 @@
 using Azure.Messaging.ServiceBus;
-using Bermondsey.Messages;
+using Bermondsey.Models;
+using Bermondsey.NotificationOrchestrator;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
@@ -8,20 +9,21 @@ namespace Bermondsey;
 
 public class DisruptionConsumer
 {
-    private readonly DisruptionNotifier _notifier;
     private readonly ILogger<DisruptionConsumer> _logger;
+    private readonly INotificationOrchestrator _notificationOrchestrator;
 
     public DisruptionConsumer(
-        DisruptionNotifier notifier,
-        ILogger<DisruptionConsumer> logger)
+        ILogger<DisruptionConsumer> logger,
+        INotificationOrchestrator notificationOrchestrator)
     {
-        _notifier = notifier;
-        _logger = logger;
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _notificationOrchestrator = notificationOrchestrator ?? 
+            throw new ArgumentNullException(nameof(notificationOrchestrator));
     }
 
-    [Function("DisruptionsConsumer")]
-    public async Task DisruptionHandler(
-        [ServiceBusTrigger("%QueueDisruptions%", Connection = "ServiceBusConnection")]
+    [Function("NotificationConsumer")]
+    public async Task NotificationHandler(
+        [ServiceBusTrigger("%QueueNotifications%", Connection = "ServiceBusConnection")]
         ServiceBusReceivedMessage message,
         ServiceBusMessageActions messageActions)
     {
@@ -33,12 +35,8 @@ public class DisruptionConsumer
         try
         {
             var json = message.Body.ToArray();
-            var messageJson = JsonSerializer.Deserialize<Disruption>(json);
-            var result = await _notifier.NotifyDisruptionAsync(messageJson!);
-
-            if(result.IsFailure) {
-                _logger.LogError(result.Error);
-            }
+            var messageJson = JsonSerializer.Deserialize<User>(json);
+            await _notificationOrchestrator.SendDisruptionNotificationAsync(messageJson!);
         }
         catch (Exception ex) {
             _logger.LogError(ex, "Could not deserialize disruption.");
@@ -46,9 +44,9 @@ public class DisruptionConsumer
         await messageActions.CompleteMessageAsync(message);
     }
 
-    [Function("DisruptionsEndConsumer")]
+    [Function("NotificationsResolvedConsumer")]
     public async Task DisruptionEndsHandler(
-        [ServiceBusTrigger("%TopicsDisruptionEndsName%", "%TopicsDisruptionEndsSubscription%", Connection = "ServiceBusConnection")]
+        [ServiceBusTrigger("%QueueResolvedNotifications%", Connection = "ServiceBusConnection")]
         ServiceBusReceivedMessage message,
         ServiceBusMessageActions messageActions)
     {
@@ -59,8 +57,8 @@ public class DisruptionConsumer
         try
         {
             var json = message.Body.ToArray();
-            var messageJson = JsonSerializer.Deserialize<DisruptionEnd>(json);
-            await _notifier.NotifyDisruptionResolvedAsync(messageJson!);
+            var messageJson = JsonSerializer.Deserialize<User>(json);
+            await _notificationOrchestrator.SendDisruptionNotificationAsync(messageJson!);
         }
         catch (Exception ex) {
             _logger.LogError(ex, "Could not deserialize disruption.");

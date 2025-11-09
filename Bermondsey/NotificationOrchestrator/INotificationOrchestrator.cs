@@ -1,10 +1,9 @@
-﻿using Bermondsey.Messages;
-using Bermondsey.Models;
+﻿using Bermondsey.Models;
 
 namespace Bermondsey.NotificationOrchestrator;
 public interface INotificationOrchestrator
 {
-    Task SendDisruptionNotificationAsync(Disruption disruption, IEnumerable<User> users);
+    Task SendDisruptionNotificationAsync(User user);
 
-    Task SendResolutionNotificationAsync(IEnumerable<User> users);
+    Task SendResolutionNotificationAsync(User user);
 }
