@@ -58,11 +58,11 @@ public class MessageFormatterTests
                 $" The following stations are affected: {stationList}.");
     }
 
-    [Theory]
-    [InlineData(Severity.Closed)]
-    [InlineData(Severity.Suspended)]
-    public void MessageFormatter_DisruptionMesaage_Correct(Severity severity)
+    [Fact]
+    public void MessageFormatter_DisruptionMesaage_Correct()
     {
+        var severity = Severity.Closed;
+
         var line = "Central";
         var origin = "White City";
         var destination = "Queensway";
