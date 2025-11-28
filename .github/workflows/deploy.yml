@@ -14,7 +14,7 @@ env:
 
 jobs:
   build-and-deploy:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     permissions:
       id-token: write #This is required for requesting the JWT
       contents: read #This is required for actions/checkout
@@ -29,7 +29,7 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: 'Resolve Project Dependencies Using Dotnet'
-        shell: pwsh
+        shell: bash
         run: |
           pushd './${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}'
           dotnet build --configuration Release --output ./output
@@ -38,9 +38,9 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_188841B1B7DB48AF96E40B8249D68090 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_9F82360A832948ECBB4F454979BBFFE9 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_82F3977093C145B4BCE36ED4C2A8B34C }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_C32F89DEC418451CA8651AEA5ACFAFC7 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_B65E34759FFE478294AFA92BC98F8E5A }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_310505866D1248A8A1D0FB755A3ED036 }}
 
       - name: 'Run Azure Functions Action'
         uses: Azure/functions-action@v1
