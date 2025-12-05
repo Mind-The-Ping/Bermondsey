@@ -39,7 +39,7 @@ public class DisruptionConsumer
             await _notificationOrchestrator.SendDisruptionNotificationAsync(messageJson!);
         }
         catch (Exception ex) {
-            _logger.LogError(ex, "Could not deserialize disruption.");
+            _logger.LogError(ex, "Could not deserialize notification.");
         }
         await messageActions.CompleteMessageAsync(message);
     }
@@ -58,10 +58,10 @@ public class DisruptionConsumer
         {
             var json = message.Body.ToArray();
             var messageJson = JsonSerializer.Deserialize<User>(json);
-            await _notificationOrchestrator.SendDisruptionNotificationAsync(messageJson!);
+            await _notificationOrchestrator.SendResolutionNotificationAsync(messageJson!);
         }
         catch (Exception ex) {
-            _logger.LogError(ex, "Could not deserialize disruption.");
+            _logger.LogError(ex, "Could not deserialize resolved notification.");
         }
 
         await messageActions.CompleteMessageAsync(message);
