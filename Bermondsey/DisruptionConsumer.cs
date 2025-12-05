@@ -61,7 +61,7 @@ public class DisruptionConsumer
             await _notificationOrchestrator.SendResolutionNotificationAsync(messageJson!);
         }
         catch (Exception ex) {
-            _logger.LogError(ex, "Could not deserialize notification.");
+            _logger.LogError(ex, "Could not deserialize resolved notification.");
         }
 
         await messageActions.CompleteMessageAsync(message);
