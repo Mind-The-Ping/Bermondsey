@@ -56,6 +56,13 @@ public class NotificationTemplateLoaderTests
             }},
             ""data"": {{
               ""id"": ""{notificationId}""
+            }},
+            ""android"": {{
+              ""priority"": ""HIGH"",
+              ""notification"": {{
+                ""channel_id"": ""mind_the_ping_id"",
+                ""visibility"": ""PUBLIC""
+              }}
             }}
           }}
         }}";
