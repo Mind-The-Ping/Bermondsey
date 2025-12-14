@@ -6,6 +6,13 @@
     },
     "data": {
       "id": "{id}"
+    },
+    "android": {
+      "priority": "HIGH",
+      "notification": {
+        "channel_id": "mind_the_ping_id",
+        "visibility": "PUBLIC"
+      }
     }
   }
 }
