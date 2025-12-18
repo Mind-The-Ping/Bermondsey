@@ -49,7 +49,7 @@ public class NotificationClient : INotifcationClient
                     .SendFcmV1NativeNotificationAsync(payload.Value, $"user:{userId}", cancellationToken),
 
                 PhoneOS.IOS => await _notificationHubClient
-                    .SendAppleNativeNotificationAsync(payload.Value, $"user:{userId}", cancellationToken),
+                    .SendFcmV1NativeNotificationAsync(payload.Value, $"user:{userId}", cancellationToken),
 
                 _ => null
             };
