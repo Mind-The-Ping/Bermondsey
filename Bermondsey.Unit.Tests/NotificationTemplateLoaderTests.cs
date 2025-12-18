@@ -16,15 +16,25 @@ public class NotificationTemplateLoaderTests
 
         var expected = $@"
         {{
-          ""aps"": {{
-            ""alert"": {{
+          ""message"": {{
+            ""notification"": {{
               ""title"": ""{title}"",
               ""body"": ""{body}""
             }},
-            ""sound"": ""default""
-          }},
-          ""data"": {{
-            ""id"": ""{notificationId}""
+            ""data"": {{
+              ""id"": ""{notificationId}""
+            }},
+            ""apns"": {{
+              ""headers"": {{
+                ""apns-priority"": ""10""
+              }},
+              ""payload"": {{
+                ""aps"": {{
+                  ""sound"": ""default"",
+                  ""interruption-level"": ""time-sensitive""
+                }}
+              }}
+            }}
           }}
         }}";
 

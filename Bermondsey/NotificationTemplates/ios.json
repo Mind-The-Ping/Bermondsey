@@ -1,12 +1,22 @@
 {
-  "aps": {
-    "alert": {
+  "message": {
+    "notification": {
       "title": "{title}",
       "body": "{body}"
     },
-    "sound": "default"
-  },
-  "data": {
-    "id": "{id}"
+    "data": {
+      "id": "{id}"
+    },
+    "apns": {
+      "headers": {
+        "apns-priority": "10"
+      },
+      "payload": {
+        "aps": {
+          "sound": "default",
+          "interruption-level": "time-sensitive"
+        }
+      }
+    }
   }
 }
