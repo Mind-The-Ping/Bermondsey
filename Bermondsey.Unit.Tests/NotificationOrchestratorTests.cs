@@ -68,7 +68,8 @@ public class NotificationOrchestratorTests
             new(Guid.Parse("b1e8fe87-98d5-4d8a-bb64-229aaa23b834"), "Pinner")
         };
 
-        var user = new User(
+        var journey = new Journey(
+                Guid.NewGuid(),
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 Guid.NewGuid(),
@@ -82,8 +83,8 @@ public class NotificationOrchestratorTests
                 affectedStations);
 
         _notificationClient.SendAsync(
-            user.Id,
-            user.PhoneOS,
+            journey.UserId,
+            journey.PhoneOS,
             Arg.Any<Guid>(),
             Arg.Any<FormattedMessage>())
             .Returns(Result.Success());
@@ -94,7 +95,7 @@ public class NotificationOrchestratorTests
             .Returns(Task.CompletedTask);
 
 
-        await _notificationOrchestrator.SendDisruptionNotificationAsync(user);
+        await _notificationOrchestrator.SendDisruptionNotificationAsync(journey);
 
         var notificationSent = _notificationClient.ReceivedCalls();
         notificationSent.Should().HaveCount(1);
@@ -102,7 +103,7 @@ public class NotificationOrchestratorTests
         var sentStatusSaved = _repository.ReceivedCalls();
         sentStatusSaved.Should().HaveCount(1);
 
-        capturedNotification.Id.Should().Be(user.NotificationId);
+        capturedNotification.Id.Should().Be(journey.NotificationId);
         capturedNotification.NotificationSentBy.Should().Be(NotificationSentBy.Push);
     }
 
@@ -117,7 +118,8 @@ public class NotificationOrchestratorTests
             new(Guid.Parse("b1e8fe87-98d5-4d8a-bb64-229aaa23b834"), "Pinner")
         };
 
-        var user = new User(
+        var journey = new Journey(
+                Guid.NewGuid(),
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 Guid.NewGuid(),
@@ -142,7 +144,7 @@ public class NotificationOrchestratorTests
         _repository.CreateAsync(Arg.Do<NotificationStatus>(c => capturedNotification = c))
             .Returns(Task.CompletedTask);
 
-        await _notificationOrchestrator.SendDisruptionNotificationAsync(user);
+        await _notificationOrchestrator.SendDisruptionNotificationAsync(journey);
 
         var notificationSent = _notificationClient.ReceivedCalls();
         notificationSent.Should().HaveCount(1);
@@ -150,7 +152,7 @@ public class NotificationOrchestratorTests
         var smsSent = _smsClient.ReceivedCalls();
         smsSent.Should().HaveCount(1);
 
-        capturedNotification.Id.Should().Be(user.NotificationId);
+        capturedNotification.Id.Should().Be(journey.NotificationId);
         capturedNotification.NotificationSentBy.Should().Be(NotificationSentBy.Sms);
     }
 
@@ -165,7 +167,8 @@ public class NotificationOrchestratorTests
             new(Guid.Parse("b1e8fe87-98d5-4d8a-bb64-229aaa23b834"), "Pinner")
         };
 
-        var user = new User(
+        var journey = new Journey(
+                Guid.NewGuid(),
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 Guid.NewGuid(),
@@ -195,9 +198,9 @@ public class NotificationOrchestratorTests
         _repository.CreateAsync(Arg.Do<NotificationStatus>(c => capturedNotification = c))
             .Returns(Task.CompletedTask);
 
-        await _notificationOrchestrator.SendDisruptionNotificationAsync(user);
+        await _notificationOrchestrator.SendDisruptionNotificationAsync(journey);
 
-        capturedNotification.Id.Should().Be(user.NotificationId);
+        capturedNotification.Id.Should().Be(journey.NotificationId);
         capturedNotification.NotificationSentBy.Should().Be(NotificationSentBy.Failed);
     }
 
@@ -212,7 +215,8 @@ public class NotificationOrchestratorTests
             new(Guid.Parse("b1e8fe87-98d5-4d8a-bb64-229aaa23b834"), "Pinner")
         };
 
-        var user = new User(
+        var journey = new Journey(
+                Guid.NewGuid(),
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 Guid.NewGuid(),
@@ -232,7 +236,7 @@ public class NotificationOrchestratorTests
             Arg.Any<FormattedMessage>())
             .Returns(Result.Success());
 
-        await _notificationOrchestrator.SendDisruptionNotificationAsync(user);
+        await _notificationOrchestrator.SendDisruptionNotificationAsync(journey);
 
         var notificationSent = _notificationClient.ReceivedCalls();
         notificationSent.Should().HaveCount(0);
@@ -249,7 +253,8 @@ public class NotificationOrchestratorTests
             new(Guid.Parse("b1e8fe87-98d5-4d8a-bb64-229aaa23b834"), "Pinner")
         };
 
-        var user = new User(
+        var journey = new Journey(
+                Guid.NewGuid(),
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 Guid.NewGuid(),
@@ -263,8 +268,8 @@ public class NotificationOrchestratorTests
                 affectedStations);
 
         _notificationClient.SendAsync(
-            user.Id,
-            user.PhoneOS,
+            journey.UserId,
+            journey.PhoneOS,
             Arg.Any<Guid>(),
             Arg.Any<FormattedMessage>())
             .Returns(Result.Success());
@@ -275,7 +280,7 @@ public class NotificationOrchestratorTests
             .Returns(Task.CompletedTask);
 
 
-        await _notificationOrchestrator.SendResolutionNotificationAsync(user);
+        await _notificationOrchestrator.SendResolutionNotificationAsync(journey);
 
         var notificationSent = _notificationClient.ReceivedCalls();
         notificationSent.Should().HaveCount(1);
@@ -283,7 +288,7 @@ public class NotificationOrchestratorTests
         var sentStatusSaved = _repository.ReceivedCalls();
         sentStatusSaved.Should().HaveCount(1);
 
-        capturedNotification.Id.Should().Be(user.NotificationId);
+        capturedNotification.Id.Should().Be(journey.NotificationId);
         capturedNotification.NotificationSentBy.Should().Be(NotificationSentBy.Push);
     }
 
@@ -298,7 +303,8 @@ public class NotificationOrchestratorTests
             new(Guid.Parse("b1e8fe87-98d5-4d8a-bb64-229aaa23b834"), "Pinner")
         };
 
-        var user = new User(
+        var journey = new Journey(
+                Guid.NewGuid(),
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 Guid.NewGuid(),
@@ -323,7 +329,7 @@ public class NotificationOrchestratorTests
         _repository.CreateAsync(Arg.Do<NotificationStatus>(c => capturedNotification = c))
             .Returns(Task.CompletedTask);
 
-        await _notificationOrchestrator.SendResolutionNotificationAsync(user);
+        await _notificationOrchestrator.SendResolutionNotificationAsync(journey);
 
         var notificationSent = _notificationClient.ReceivedCalls();
         notificationSent.Should().HaveCount(1);
@@ -331,7 +337,7 @@ public class NotificationOrchestratorTests
         var smsSent = _smsClient.ReceivedCalls();
         smsSent.Should().HaveCount(1);
 
-        capturedNotification.Id.Should().Be(user.NotificationId);
+        capturedNotification.Id.Should().Be(journey.NotificationId);
         capturedNotification.NotificationSentBy.Should().Be(NotificationSentBy.Sms);
     }
 
@@ -346,7 +352,8 @@ public class NotificationOrchestratorTests
             new(Guid.Parse("b1e8fe87-98d5-4d8a-bb64-229aaa23b834"), "Pinner")
         };
 
-        var user = new User(
+        var journey = new Journey(
+                Guid.NewGuid(),
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 Guid.NewGuid(),
@@ -376,9 +383,9 @@ public class NotificationOrchestratorTests
         _repository.CreateAsync(Arg.Do<NotificationStatus>(c => capturedNotification = c))
             .Returns(Task.CompletedTask);
 
-        await _notificationOrchestrator.SendResolutionNotificationAsync(user);
+        await _notificationOrchestrator.SendResolutionNotificationAsync(journey);
 
-        capturedNotification.Id.Should().Be(user.NotificationId);
+        capturedNotification.Id.Should().Be(journey.NotificationId);
         capturedNotification.NotificationSentBy.Should().Be(NotificationSentBy.Failed);
     }
 
@@ -393,7 +400,8 @@ public class NotificationOrchestratorTests
             new(Guid.Parse("b1e8fe87-98d5-4d8a-bb64-229aaa23b834"), "Pinner")
         };
 
-        var user = new User(
+        var journey = new Journey(
+                Guid.NewGuid(),
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 Guid.NewGuid(),
@@ -413,7 +421,7 @@ public class NotificationOrchestratorTests
             Arg.Any<FormattedMessage>())
             .Returns(Result.Success());
 
-        await _notificationOrchestrator.SendResolutionNotificationAsync(user);
+        await _notificationOrchestrator.SendResolutionNotificationAsync(journey);
 
         var notificationSent = _notificationClient.ReceivedCalls();
         notificationSent.Should().HaveCount(0);
