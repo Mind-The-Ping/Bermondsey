@@ -126,7 +126,6 @@ public class NotificationTemplateLoaderTests
         }}
         ");
 
-
         var result = NotificationTemplateLoader.BuildPayload(
             phoneOS.ToString().ToLower(),
             title,
