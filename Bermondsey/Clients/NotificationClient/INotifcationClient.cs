@@ -9,6 +9,8 @@ public interface INotifcationClient
         Guid userId,
         PhoneOS phoneOS,
         Guid notificationId,
+        int unreadCount,
+        string notificationType,
         FormattedMessage message, 
         CancellationToken cancellationToken = default);
 }

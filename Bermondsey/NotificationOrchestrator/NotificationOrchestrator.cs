@@ -47,7 +47,14 @@ public class NotificationOrchestrator : INotificationOrchestrator
 
         var message = formatMessage(journey);
 
-        var notificationResult = await _notificationClient.SendAsync(journey.UserId, journey.PhoneOS, journey.NotificationId, message);
+        var notificationResult = await _notificationClient.SendAsync(
+            journey.UserId, 
+            journey.PhoneOS, 
+            journey.NotificationId, 
+            journey.UnReadMessageCount,
+            notificationType,
+            message);
+
         NotificationSentBy sentBy;
 
         if (notificationResult.IsSuccess) {

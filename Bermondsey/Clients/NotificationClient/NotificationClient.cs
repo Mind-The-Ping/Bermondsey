@@ -23,6 +23,8 @@ public class NotificationClient : INotifcationClient
     Guid userId,
     PhoneOS phoneOS,
     Guid notificationId,
+    int unreadCount,
+    string notificationType,
     FormattedMessage message,
     CancellationToken cancellationToken = default)
     {
@@ -32,12 +34,18 @@ public class NotificationClient : INotifcationClient
 
         try
         {
+            int? badge =
+                phoneOS == PhoneOS.IOS && notificationType == "disruption"
+                    ? unreadCount
+                    : null;
+
             string platform = phoneOS.ToString().ToLower();
             var payload = NotificationTemplateLoader.BuildPayload(
                 platform, 
                 message.Title, 
                 message.Body, 
-                notificationId);
+                notificationId,
+                badge);
 
             if (payload.IsFailure) {
                 return Result.Failure(payload.Error);
