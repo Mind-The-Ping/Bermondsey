@@ -27,27 +27,27 @@ public class NotificationOrchestrator : INotificationOrchestrator
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public Task SendDisruptionNotificationAsync(User user)
+    public Task SendDisruptionNotificationAsync(Journey journey)
         => SendNotificationAsync(
-            user,
+            journey,
             u => _messageFormatter.FormatDisruption(u.Line.Name, u.StartStation.Name, u.EndStation.Name, u.Severity, u.AffectedStations),
             "disruption");
 
-    public Task SendResolutionNotificationAsync(User user)
+    public Task SendResolutionNotificationAsync(Journey journey)
         => SendNotificationAsync(
-            user,
+            journey,
             u => _messageFormatter.FormatResolved(u.Line.Name, u.StartStation.Name, u.EndStation.Name),
             "resolved");
 
-    private async Task SendNotificationAsync(User user, Func<User, FormattedMessage> formatMessage, string notificationType)
+    private async Task SendNotificationAsync(Journey journey, Func<Journey, FormattedMessage> formatMessage, string notificationType)
     {
         var now = TimeOnly.FromDateTime(DateTime.UtcNow);
-        if (new TimeOnly(user.EndTime.Hour, user.EndTime.Minute) <= now)
+        if (new TimeOnly(journey.EndTime.Hour, journey.EndTime.Minute) <= now)
             return;
 
-        var message = formatMessage(user);
+        var message = formatMessage(journey);
 
-        var notificationResult = await _notificationClient.SendAsync(user.Id, user.PhoneOS, user.NotificationId, message);
+        var notificationResult = await _notificationClient.SendAsync(journey.UserId, journey.PhoneOS, journey.NotificationId, message);
         NotificationSentBy sentBy;
 
         if (notificationResult.IsSuccess) {
@@ -55,17 +55,17 @@ public class NotificationOrchestrator : INotificationOrchestrator
         }
         else
         {
-            _logger.LogWarning("Push {NotificationType} notification failed for {UserId}: {Error}", notificationType, user.Id, notificationResult.Error);
+            _logger.LogWarning("Push {NotificationType} notification failed for {UserId}: {Error}", notificationType, journey.UserId, notificationResult.Error);
 
-            var smsResult = await _smsClient.SendAsync(user.PhoneNumber, message);
+            var smsResult = await _smsClient.SendAsync(journey.PhoneNumber, message);
             sentBy = smsResult.IsSuccess ? NotificationSentBy.Sms : NotificationSentBy.Failed;
 
             if (smsResult.IsFailure)
             {
-                _logger.LogWarning("SMS {NotificationType} notification failed for {UserId}: {Error}", notificationType, user.Id, smsResult.Error);
+                _logger.LogWarning("SMS {NotificationType} notification failed for {UserId}: {Error}", notificationType, journey.UserId, smsResult.Error);
             }
         }
 
-        await _repository.CreateAsync(new NotificationStatus(user.NotificationId, sentBy));
+        await _repository.CreateAsync(new NotificationStatus(journey.NotificationId, sentBy));
     }
 }

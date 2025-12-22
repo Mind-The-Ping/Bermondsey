@@ -3,7 +3,7 @@
 namespace Bermondsey.NotificationOrchestrator;
 public interface INotificationOrchestrator
 {
-    Task SendDisruptionNotificationAsync(User user);
+    Task SendDisruptionNotificationAsync(Journey journey);
 
-    Task SendResolutionNotificationAsync(User user);
+    Task SendResolutionNotificationAsync(Journey journey);
 }

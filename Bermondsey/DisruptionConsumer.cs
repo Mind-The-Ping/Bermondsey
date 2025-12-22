@@ -35,7 +35,7 @@ public class DisruptionConsumer
         try
         {
             var json = message.Body.ToArray();
-            var messageJson = JsonSerializer.Deserialize<User>(json);
+            var messageJson = JsonSerializer.Deserialize<Journey>(json);
             await _notificationOrchestrator.SendDisruptionNotificationAsync(messageJson!);
         }
         catch (Exception ex) {
@@ -57,7 +57,7 @@ public class DisruptionConsumer
         try
         {
             var json = message.Body.ToArray();
-            var messageJson = JsonSerializer.Deserialize<User>(json);
+            var messageJson = JsonSerializer.Deserialize<Journey>(json);
             await _notificationOrchestrator.SendResolutionNotificationAsync(messageJson!);
         }
         catch (Exception ex) {
