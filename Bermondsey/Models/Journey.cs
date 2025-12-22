@@ -12,7 +12,8 @@ public class Journey(
     string phoneNumber,
     PhoneOS phoneOS,
     TimeOnly endTime,
-    IEnumerable<Station> affectedStations)
+    IEnumerable<Station> affectedStations,
+    int unReadMessageCount)
 {
     public Guid JourneyId { get; init; } = journeyId;
     public Guid UserId { get; init; } = userId;
@@ -26,4 +27,5 @@ public class Journey(
     public PhoneOS PhoneOS { get; init; } = phoneOS;
     public TimeOnly EndTime { get; init; } = endTime;
     public IEnumerable<Station> AffectedStations { get; init; } = affectedStations;
+    public int UnReadMessageCount { get; set; } = unReadMessageCount;
 }

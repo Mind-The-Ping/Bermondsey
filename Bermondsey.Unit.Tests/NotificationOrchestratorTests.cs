@@ -80,12 +80,15 @@ public class NotificationOrchestratorTests
                 "+447400123456",
                 PhoneOS.Android,
                 TimeOnly.FromDateTime(DateTime.UtcNow.AddHours(5)),
-                affectedStations);
+                affectedStations,
+                0);
 
         _notificationClient.SendAsync(
             journey.UserId,
             journey.PhoneOS,
             Arg.Any<Guid>(),
+            Arg.Any<int>(),
+            Arg.Any<string>(),
             Arg.Any<FormattedMessage>())
             .Returns(Result.Success());
 
@@ -130,12 +133,15 @@ public class NotificationOrchestratorTests
                 "+447400123456",
                 PhoneOS.Android,
                 TimeOnly.FromDateTime(DateTime.UtcNow.AddHours(5)),
-                affectedStations);
+                affectedStations,
+                0);
 
         _notificationClient.SendAsync(
             Arg.Any<Guid>(),
             Arg.Any<PhoneOS>(),
             Arg.Any<Guid>(),
+            Arg.Any<int>(),
+            Arg.Any<string>(),
             Arg.Any<FormattedMessage>())
             .Returns(Result.Failure("This failed."));
 
@@ -179,12 +185,15 @@ public class NotificationOrchestratorTests
                 "+447400123456",
                 PhoneOS.Android,
                 TimeOnly.FromDateTime(DateTime.UtcNow.AddHours(5)),
-                affectedStations);
+                affectedStations,
+                0);
 
         _notificationClient.SendAsync(
             Arg.Any<Guid>(),
             Arg.Any<PhoneOS>(),
             Arg.Any<Guid>(),
+            Arg.Any<int>(),
+            Arg.Any<string>(),
             Arg.Any<FormattedMessage>())
             .Returns(Result.Failure("This failed."));
 
@@ -227,12 +236,15 @@ public class NotificationOrchestratorTests
                 "+447400123456",
                 PhoneOS.Android,
                 TimeOnly.FromDateTime(DateTime.UtcNow.AddHours(-1)),
-                affectedStations);
+                affectedStations,
+                0);
 
         _notificationClient.SendAsync(
             Arg.Any<Guid>(),
             Arg.Any<PhoneOS>(),
             Arg.Any<Guid>(),
+            Arg.Any<int>(),
+            Arg.Any<string>(),
             Arg.Any<FormattedMessage>())
             .Returns(Result.Success());
 
@@ -265,12 +277,15 @@ public class NotificationOrchestratorTests
                 "+447400123456",
                 PhoneOS.Android,
                 TimeOnly.FromDateTime(DateTime.UtcNow.AddHours(5)),
-                affectedStations);
+                affectedStations,
+                0);
 
         _notificationClient.SendAsync(
             journey.UserId,
             journey.PhoneOS,
             Arg.Any<Guid>(),
+            Arg.Any<int>(),
+            Arg.Any<string>(),
             Arg.Any<FormattedMessage>())
             .Returns(Result.Success());
 
@@ -315,12 +330,15 @@ public class NotificationOrchestratorTests
                 "+447400123456",
                 PhoneOS.Android,
                 TimeOnly.FromDateTime(DateTime.UtcNow.AddHours(5)),
-                affectedStations);
+                affectedStations,
+                0);
 
         _notificationClient.SendAsync(
             Arg.Any<Guid>(),
             Arg.Any<PhoneOS>(),
             Arg.Any<Guid>(),
+            Arg.Any<int>(),
+            Arg.Any<string>(),
             Arg.Any<FormattedMessage>())
             .Returns(Result.Failure("This failed."));
 
@@ -364,12 +382,15 @@ public class NotificationOrchestratorTests
                 "+447400123456",
                 PhoneOS.Android,
                 TimeOnly.FromDateTime(DateTime.UtcNow.AddHours(5)),
-                affectedStations);
+                affectedStations,
+                0);
 
         _notificationClient.SendAsync(
             Arg.Any<Guid>(),
             Arg.Any<PhoneOS>(),
             Arg.Any<Guid>(),
+            Arg.Any<int>(),
+            Arg.Any<string>(),
             Arg.Any<FormattedMessage>())
             .Returns(Result.Failure("This failed."));
 
@@ -412,12 +433,15 @@ public class NotificationOrchestratorTests
                 "+447400123456",
                 PhoneOS.Android,
                 TimeOnly.FromDateTime(DateTime.UtcNow.AddHours(-1)),
-                affectedStations);
+                affectedStations,
+                0);
 
         _notificationClient.SendAsync(
             Arg.Any<Guid>(),
             Arg.Any<PhoneOS>(),
             Arg.Any<Guid>(),
+            Arg.Any<int>(),
+            Arg.Any<string>(),
             Arg.Any<FormattedMessage>())
             .Returns(Result.Success());
 
