@@ -9,6 +9,7 @@ using Microsoft.Azure.Functions.Worker.Builder;
 using Microsoft.Azure.NotificationHubs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 var builder = FunctionsApplication.CreateBuilder(args);
 
@@ -41,5 +42,10 @@ builder.ConfigureFunctionsWebApplication();
 builder.Services
     .AddApplicationInsightsTelemetryWorkerService()
     .ConfigureFunctionsApplicationInsights();
+
+builder.Logging
+    .ClearProviders()
+    .AddConsole()
+    .AddApplicationInsights();
 
 builder.Build().Run();
