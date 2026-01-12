@@ -28,6 +28,7 @@ public class MessageFormatter
             return new FormattedMessage
             {
                 Title = _templates.Delay.Title
+               .Replace("{line}", line)
                .Replace("{origin}", origin)
                .Replace("{destination}", destination)
                .Replace("{severity}", severity.ToString()),
@@ -45,6 +46,7 @@ public class MessageFormatter
             return new FormattedMessage
             {
                 Title = _templates.Disruption.Title
+               .Replace("{line}", line)
                .Replace("{origin}", origin)
                .Replace("{destination}", destination)
                .Replace("{severity}", severity.ToString()),
