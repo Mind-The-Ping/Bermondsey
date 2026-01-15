@@ -11,21 +11,25 @@ namespace Bermondsey.Clients.SmsClient;
 public class RealSmsClient : ISmsClient
 {
     private readonly Azure.Communication.Sms.SmsClient _inner;
-    private readonly SmsOptions _options;
     private readonly PhoneNumberPool _phoneNumberPool;
     private readonly PerNumberRateLimiter _rateLimiter;
 
     public RealSmsClient(IOptions<SmsOptions> options)
     {
-        _options = options.Value ?? 
+        var actualOptions = options.Value ?? 
             throw new ArgumentNullException(nameof(options));
 
-        _phoneNumberPool = new PhoneNumberPool(_options.PhoneNumbers);
-        _rateLimiter = new PerNumberRateLimiter(
-           _options.PhoneNumbers,
-           maxPerMinute: _options.MaxPerMinute);
+        var phoneList = actualOptions.GetPhoneNumberList();
 
-        _inner = new Azure.Communication.Sms.SmsClient(_options.ConnectionString);
+        if (phoneList.Count == 0) {
+            throw new ArgumentNullException(
+                "At least one phone number is required in configuration");
+        }
+
+        _phoneNumberPool = new PhoneNumberPool(phoneList);
+        _rateLimiter = new PerNumberRateLimiter(phoneList, actualOptions.MaxPerMinute);
+
+        _inner = new Azure.Communication.Sms.SmsClient(actualOptions.ConnectionString);
     }
 
     public async Task<Result> SendAsync(
